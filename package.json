@@ -12,6 +12,7 @@
     "vite": "^2.9.9"
   },
   "dependencies": {
+    "@rive-app/canvas": "^1.0.58",
     "monaco-editor": "^0.33.0"
   }
 }

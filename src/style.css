@@ -8,7 +8,18 @@
 }
 
 #editor {
+  vertical-align: top;
   text-align: left;
   width: 600px;
   height: 800px;
+  display: inline-block;
+  border: 1px solid gray;
+}
+
+#canvas {
+  vertical-align: top;
+  display: inline-block;
+  border: 1px solid gray;
+  width: 500;
+  height: 500;
 }

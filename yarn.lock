@@ -2,6 +2,11 @@
 # yarn lockfile v1
 
 
+"@rive-app/canvas@^1.0.58":
+  version "1.0.58"
+  resolved "https://registry.yarnpkg.com/@rive-app/canvas/-/canvas-1.0.58.tgz#485039f498df592fa32ed8ec7505035f12f1cccb"
+  integrity sha512-nxzsuOg16i/1co20Uh2PYSTXEuR7xrYBYZ8Xad5fneZ6qVK9GsCQUmOLFzCsnh4VqGhLYpQtdjVmeqJ6oYee4g==
+
 esbuild-android-64@0.14.39:
   version "0.14.39"
   resolved "https://registry.yarnpkg.com/esbuild-android-64/-/esbuild-android-64-0.14.39.tgz#09f12a372eed9743fd77ff6d889ac14f7b340c21"
