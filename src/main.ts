@@ -9,6 +9,8 @@ import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker'
 import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker'
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 
+import { Color, Deprive, Fill, Size } from './lib/objects'
+
 const w: any = self
 
 w.MonacoEnvironment = {
@@ -78,3 +80,12 @@ window.addEventListener('DOMContentLoaded', () => {
     false
   )
 })
+
+const make = (): Deprive => {
+  const D = new Deprive()
+  const artboard = D.artboard({
+    size: new Size(100, 100),
+    fills: [Fill.fromHex('#FF0000')],
+  })
+  return D
+}
