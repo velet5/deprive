@@ -1,5 +1,38 @@
-interface DepriveObject {
+export enum DepriveObjectType {
+  Artboard = 1,
+}
+
+export enum DeprivePropertyType {
+  Fill = 1,
+  Color,
+  Opacity,
+}
+
+export interface DepriveEntity {
   id: number
+}
+
+export interface DepriveObject extends DepriveEntity {
+  id: number
+  type: DepriveObjectType
+  parent: DepriveObject | null
+}
+
+export interface DepriveProperty extends DepriveEntity {
+  id: number
+  type: DeprivePropertyType
+  parent: DepriveProperty | null
+  object: DepriveObject | null
+}
+
+interface Animatable {}
+
+export class DepriveNumber implements Animatable {
+  value: number
+
+  constructor(value: number) {
+    this.value = value
+  }
 }
 
 export class Point {
@@ -52,22 +85,36 @@ export class Color {
   }
 }
 
-export class Fill {
+export class Fill implements DepriveProperty {
+  type: DeprivePropertyType = DeprivePropertyType.Fill
+
+  parent: DepriveProperty | null = null
+  object: DepriveObject | null = null
+
+  id: number
   color: Color
   opacity: number
 
-  constructor(color: Color, opacity: number) {
+  static defaultColor: Color = Color.fromHex('#888888')
+  static defaultOpacity = 1
+
+  constructor(
+    id: number,
+    object: DepriveObject | null,
+    color: Color,
+    opacity: number
+  ) {
+    this.id = id
+    this.object = object
     this.color = color
     this.opacity = opacity
-  }
-
-  static fromHex(hex: string, opacity?: number): Fill {
-    return new Fill(Color.fromHex(hex), opacity || 1)
   }
 }
 
 export class ArtBoard implements DepriveObject {
   id: number
+  type: DepriveObjectType = DepriveObjectType.Artboard
+  parent: DepriveObject | null = null
 
   name: string
   position: Point
@@ -112,13 +159,14 @@ export type ArtboardOptions = {
   fills?: Fill[]
 }
 
-enum DepriveType {
-  Artboard = 'Artboard',
+export type FillOptions = {
+  color?: Color
+  opacity?: number
 }
 
-type DepriveEntry = {
+export type DepriveEntry = {
   id: number
-  tpe: DepriveType
+  tpe: DepriveObjectType
   object: DepriveObject
 }
 
@@ -152,14 +200,71 @@ export class Deprive {
 
     this.registry[id] = {
       id,
-      tpe: DepriveType.Artboard,
+      tpe: DepriveObjectType.Artboard,
       object: artboard,
     }
 
     return artboard
   }
 
+  fill(options: FillOptions): Fill {
+    const id = this.nextId()
+    const color = options.color ?? Fill.defaultColor
+    const opacity = options.opacity ?? Fill.defaultOpacity
+
+    const fill = new Fill(id, null, color, opacity)
+
+    return fill
+  }
+
+  fillFromHex(hex: string): Fill {
+    const color = Color.fromHex(hex)
+    const fill = this.fill({ color })
+    return fill
+  }
+
   private nextId(): number {
     return this.id++
+  }
+}
+
+export enum AnimationType {
+  OneShot = 1,
+  Loop,
+  PingPong,
+}
+
+export class AnimationLine {
+  property: DepriveProperty
+  keys: AnimationKey[]
+
+  constructor(property: DepriveProperty, keys: AnimationKey[]) {
+    this.property = property
+    this.keys = keys
+  }
+}
+
+export class AnimationKey {
+  frame: number
+  value: any
+
+  constructor(frame: number, value: any) {
+    this.frame = frame
+    this.value = value
+  }
+}
+
+export class Animation {
+  name: string
+  type: AnimationType
+  duration: number = 1000
+  playbackSpeed: number = 1
+  snapKeysNumber: number = 60
+  lines: AnimationLine[]
+
+  constructor(name: string, type: AnimationType, lines: AnimationLine[]) {
+    this.name = name
+    this.type = type
+    this.lines = lines
   }
 }
