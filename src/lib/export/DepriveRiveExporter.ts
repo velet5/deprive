@@ -4,12 +4,17 @@ import { DepriveObjectType } from '../core'
 import { Deprive } from '../deprive'
 import { Fill } from '../fill'
 import { DepriveExporter } from './DepriveExporter'
+import { Animation, AnimationType } from '../anim/animation'
+import { Color } from '../color'
 
 const ids = {
   artboard: 0x01,
   solidColor: 0x12,
   blackboard: 0x17,
   fill: 0x14,
+  keyedObject: 0x19,
+  keyedProperty: 0x1a,
+  linearAnimation: 0x1f,
 }
 
 const properties = {
@@ -18,11 +23,29 @@ const properties = {
   width: 0x07,
   height: 0x08,
   colorValue: 0x25,
+  keyedObjectId: 0x33,
+  keyedPropertyProperty: 0x35,
+  animationName: 0x37,
+  animationType: 0x3b,
+  frame: 0x43,
+  interpolationType: 0x44,
+}
+
+const keyframes = {
+  color: 0x25,
+  colorValue: 0x58,
+}
+
+const interpolation = {
+  linear: 0x01,
+}
+
+const animation_type = {
+  loop: 0x01,
+  pingPong: 0x02,
 }
 
 export class DepriveRiveExporter implements DepriveExporter {
-  private idCount: number = 0
-
   export(deprive: Deprive): Uint8Array {
     const buffer = new Buffer()
 
@@ -55,14 +78,64 @@ export class DepriveRiveExporter implements DepriveExporter {
 
     buffer.writeZero()
 
+    deprive
+      .listAnimations()
+      .forEach((animation) => this.writeAnimation(buffer, animation))
+
     return buffer.toUint8Array()
   }
 
-  //   private exportEntities(entities: DepriveEntity[]): void {
-  //     entities.forEach((entity, id) => {
+  private writeAnimation(buffer: Buffer, animation: Animation): void {
+    buffer.write(ids.linearAnimation)
+    buffer.write(properties.animationName)
+    buffer.writeString(animation._name)
 
-  //     })
-  //   }
+    switch (animation._type) {
+      case AnimationType.Loop:
+        buffer.write(properties.animationType)
+        buffer.write(animation_type.loop)
+        break
+      case AnimationType.PingPong:
+        buffer.write(properties.animationType)
+        buffer.write(animation_type.pingPong)
+        break
+      default:
+        break
+    }
+
+    buffer.writeZero()
+
+    animation._lines.forEach((line) => {
+      buffer.write(ids.keyedObject)
+      buffer.write(properties.keyedObjectId)
+      buffer.write(0x01)
+      buffer.writeZero()
+      buffer.write(ids.keyedProperty)
+      buffer.write(properties.keyedPropertyProperty)
+      buffer.write(properties.colorValue)
+      buffer.writeZero()
+      line.keys.forEach((key) => {
+        buffer.write(keyframes.color)
+        if (key.frame != 0) {
+          buffer.write(properties.frame)
+          buffer.writeVarUint(key.frame)
+        }
+        buffer.write(properties.interpolationType)
+        buffer.write(interpolation.linear)
+        buffer.write(keyframes.colorValue)
+        this.writeColorValue(buffer, key.value as Color)
+
+        buffer.writeZero()
+      })
+    })
+  }
+
+  private writeColorValue(buffer: Buffer, color: Color): void {
+    buffer.write(color.b)
+    buffer.write(color.g)
+    buffer.write(color.r)
+    buffer.write(Math.floor((color.a / 100) * 255))
+  }
 
   private writeFill(buffer: Buffer, fill: Fill): void {
     buffer.write(ids.solidColor)
@@ -72,12 +145,8 @@ export class DepriveRiveExporter implements DepriveExporter {
 
     const color = fill.getColor()
     buffer.write(properties.colorValue)
-    buffer.write(color.b)
-    buffer.write(color.g)
-    buffer.write(color.r)
-    buffer.write(Math.floor((color.a / 100) * 255))
+    this.writeColorValue(buffer, color)
     buffer.writeZero()
-    this.idCount += 1
 
     buffer.write(ids.fill)
     buffer.write(properties.parentId)
@@ -93,7 +162,6 @@ export class DepriveRiveExporter implements DepriveExporter {
     this.writeHeight(buffer, artboard._size.height)
 
     buffer.writeZero()
-    this.idCount += 1
   }
 
   private writeWidth(buffer: Buffer, width: number): void {

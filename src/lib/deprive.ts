@@ -28,4 +28,8 @@ export class Deprive implements IdGenerator {
     this._animations.push(animation)
     return animation
   }
+
+  listAnimations(): Animation[] {
+    return this._animations
+  }
 }
