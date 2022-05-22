@@ -7,16 +7,13 @@ export const make = (): Deprive => {
   const D = new Deprive()
 
   const red = new Color(255, 0, 0)
-  const blue = new Color(0, 0, 255)
   const green = new Color(0, 255, 0)
 
-  const artboard = D.artboard('canvas').fill((f) => f.color(red))
+  const fill = D.fill(red)
 
-  const fill = artboard._fills[0]
+  D.artboard('canvas').fill(fill)
 
-  const changeColor = D.animation('change-color')
-
-  changeColor.line(fill.getColor(), [
+  D.animation('change-color').line(fill.getColor(), [
     new AnimationKey(0, red),
     new AnimationKey(60, green),
   ])

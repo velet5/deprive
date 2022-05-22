@@ -1,6 +1,8 @@
 import { Artboard } from './artboard'
 import { DepriveObject, IdGenerator } from './core'
 import { Animation } from './anim/animation'
+import { Color } from './color'
+import { Fill } from './fill'
 
 export class Deprive implements IdGenerator {
   private _id: number = 0
@@ -16,6 +18,10 @@ export class Deprive implements IdGenerator {
     const artborard = new Artboard(this.nextId(), this).name(name)
     this._objects.push(artborard)
     return artborard
+  }
+
+  fill(color: Color): Fill {
+    return new Fill(this.nextId(), null, null, this).color(color)
   }
 
   nextId(): number {

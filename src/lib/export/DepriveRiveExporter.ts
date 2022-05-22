@@ -141,7 +141,7 @@ export class DepriveRiveExporter implements DepriveExporter {
     buffer.write(ids.solidColor)
 
     buffer.write(properties.parentId)
-    buffer.writeVarUint(fill.id)
+    buffer.writeVarUint(0x02) // FIXME
 
     const color = fill.getColor()
     buffer.write(properties.colorValue)
@@ -150,7 +150,7 @@ export class DepriveRiveExporter implements DepriveExporter {
 
     buffer.write(ids.fill)
     buffer.write(properties.parentId)
-    buffer.write(0x00)
+    buffer.write(0x00) // FIXME
   }
 
   private writeArtboard(buffer: Buffer, artboard: Artboard): void {

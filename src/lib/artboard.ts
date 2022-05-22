@@ -1,3 +1,4 @@
+import { Color } from './color'
 import { DepriveObject, DepriveObjectType, IdGenerator } from './core'
 import { Fill } from './fill'
 import { Origin, Point, Size } from './misc'
@@ -52,11 +53,8 @@ export class Artboard implements DepriveObject {
     return this
   }
 
-  fill(f?: (fill: Fill) => Fill): Artboard {
-    let fill = new Fill(this._generator.nextId(), null, this, this._generator)
-    if (f) {
-      fill = f(fill)
-    }
+  fill(fill: Fill): Artboard {
+    fill.object = this
     this._fills.push(fill)
     return this
   }
