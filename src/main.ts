@@ -28,32 +28,12 @@ w.MonacoEnvironment = {
   },
 }
 
-const readFile = (element: HTMLInputElement, cb: (url: string) => void) => {
-  const file = element.files?.item(0)
-
-  if (file == null) {
-    return
-  }
-
-  const reader = new FileReader()
-
-  reader.readAsArrayBuffer(file)
-
-  reader.onloadend = (e) => {
-    const buffer = e.target?.result as ArrayBuffer
-
-    const url = URL.createObjectURL(new Blob([new Uint8Array(buffer)]))
-    cb(url)
-  }
-}
-
 window.addEventListener('DOMContentLoaded', () => {
   const element = document.getElementById('editor')!
   const canvas = document.getElementById('canvas')!
 
   const playAnimation = (url: string) => {
     console.log(url)
-    console.log(canvas)
     new rive.Rive({
       src: url,
       canvas: canvas,
@@ -67,15 +47,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const editor = monaco.editor.create(element, {
     language: 'javascript',
+    wordWrap: 'on',
   })
-
-  const fileInput = document.getElementById('file-input')! as HTMLInputElement
-
-  fileInput.addEventListener(
-    'change',
-    () => readFile(fileInput, playAnimation),
-    false
-  )
 
   const deprive = make()
   const bytes = exportRive(deprive)
@@ -93,4 +66,8 @@ window.addEventListener('DOMContentLoaded', () => {
   const s = arr.map(zpad).join(' ')
 
   editor.setValue(s)
+
+  const blob = new Blob([bytes], { type: 'application/rive' })
+  const url = URL.createObjectURL(blob)
+  playAnimation(url)
 })

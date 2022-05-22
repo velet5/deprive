@@ -1,5 +1,3 @@
-import { Animatable } from './anim/animatable'
-
 export class Point {
   x: number
   y: number

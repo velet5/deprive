@@ -8,6 +8,10 @@ export class Deprive implements IdGenerator {
   private _objects: DepriveObject[] = []
   private _animations: Animation[] = []
 
+  listObjects(): DepriveObject[] {
+    return this._objects
+  }
+
   artboard(name: string): Artboard {
     const artborard = new Artboard(this.nextId(), this).name(name)
     this._objects.push(artborard)

@@ -11,7 +11,7 @@ export class Artboard implements DepriveObject {
 
   _name: string = 'Artboard'
   _position: Point = new Point(0, 0)
-  _size: Size = new Size(500, 500)
+  _size: Size = new Size(1000, 1000)
   _origin: Origin = new Origin(0, 0)
   _mainArtboard: boolean = false
   _clip: boolean = true
