@@ -8,6 +8,12 @@ export enum DeprivePropertyType {
   Opacity,
 }
 
+export enum DepriveEntityType {
+  Artboard = 1,
+  Color,
+  Fill,
+}
+
 export interface DepriveEntity {
   id: number
 }
