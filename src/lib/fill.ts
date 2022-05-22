@@ -1,5 +1,10 @@
-import { DepriveObject, DepriveProperty, DeprivePropertyType } from './core'
-import { Color } from './misc'
+import { Color, DepriveColor } from './color'
+import {
+  DepriveObject,
+  DepriveProperty,
+  DeprivePropertyType,
+  IdGenerator,
+} from './core'
 
 export class Fill implements DepriveProperty {
   type: DeprivePropertyType = DeprivePropertyType.Fill
@@ -9,26 +14,28 @@ export class Fill implements DepriveProperty {
 
   id: number
 
-  _color: Color = new Color(0, 0, 0)
-  _opacity: number = 1
+  private _color?: DepriveColor
+
+  private idGenerator: IdGenerator
 
   constructor(
     id: number,
     parent: DepriveProperty | null,
-    object: DepriveObject | null
+    object: DepriveObject | null,
+    idGenerator: IdGenerator
   ) {
     this.id = id
     this.parent = parent
     this.object = object
+    this.idGenerator = idGenerator
   }
 
   color(color: Color): Fill {
-    this._color = color
+    this._color = new DepriveColor(this.idGenerator.nextId(), this, null, color)
     return this
   }
 
-  opacity(opacity: number): Fill {
-    this._opacity = opacity
-    return this
+  getColor(): DepriveColor {
+    return this._color!
   }
 }

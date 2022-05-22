@@ -1,24 +1,12 @@
-import './style.css'
-
-import * as monaco from 'monaco-editor'
 import * as rive from '@rive-app/canvas'
-
+import * as monaco from 'monaco-editor'
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
-import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
 import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker'
 import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker'
+import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
-
-import {
-  Color,
-  Deprive,
-  Fill,
-  Size,
-  Animation,
-  AnimationType,
-  AnimationLine,
-  AnimationKey,
-} from './lib/objects'
+import { exportRive, make } from './setup'
+import './style.css'
 
 const w: any = self
 
@@ -88,20 +76,21 @@ window.addEventListener('DOMContentLoaded', () => {
     () => readFile(fileInput, playAnimation),
     false
   )
+
+  const deprive = make()
+  const bytes = exportRive(deprive)
+
+  const arr = [] as number[]
+  for (let i = 0; i < bytes.byteLength; i++) {
+    arr.push(bytes[i])
+  }
+
+  const zpad = (n: number) => {
+    const s = n.toString(16)
+    return s.length === 1 ? '0' + s : s
+  }
+
+  const s = arr.map(zpad).join(' ')
+
+  editor.setValue(s)
 })
-
-const make = (): Deprive => {
-  const D = new Deprive()
-  const fill = D.fillFromHex('#FF0000')
-
-  const artboard = D.artboard({
-    size: new Size(100, 100),
-    fills: [fill],
-  })
-
-  new Animation('color', AnimationType.Loop, [
-    new AnimationLine(fill, [new AnimationKey(1, ))]),
-  ])
-
-  return D
-}

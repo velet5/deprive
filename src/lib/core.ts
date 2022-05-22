@@ -24,3 +24,7 @@ export interface DepriveProperty extends DepriveEntity {
   parent: DepriveProperty | null
   object: DepriveObject | null
 }
+
+export interface IdGenerator {
+  nextId(): number
+}

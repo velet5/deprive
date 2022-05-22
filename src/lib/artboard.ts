@@ -1,8 +1,10 @@
-import { DepriveObject, DepriveObjectType } from './core'
+import { DepriveObject, DepriveObjectType, IdGenerator } from './core'
 import { Fill } from './fill'
 import { Origin, Point, Size } from './misc'
 
 export class Artboard implements DepriveObject {
+  private _generator: IdGenerator
+
   id: number
   type: DepriveObjectType = DepriveObjectType.Artboard
   parent: DepriveObject | null = null
@@ -15,8 +17,9 @@ export class Artboard implements DepriveObject {
   _clip: boolean = true
   _fills: Fill[] = []
 
-  constructor(id: number, d: Deprive) {
+  constructor(id: number, generator: IdGenerator) {
     this.id = id
+    this._generator = generator
   }
 
   name(name: string): Artboard {
@@ -50,7 +53,7 @@ export class Artboard implements DepriveObject {
   }
 
   fill(f?: (fill: Fill) => Fill): Artboard {
-    let fill = new Fill(, null, this)
+    let fill = new Fill(this._generator.nextId(), null, this, this._generator)
     if (f) {
       fill = f(fill)
     }
