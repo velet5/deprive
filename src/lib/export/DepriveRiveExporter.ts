@@ -9,6 +9,9 @@ import { Color, DepriveColor } from '../color'
 
 const ids = {
   artboard: 0x01,
+  shape: 0x03,
+  ellipse: 0x04,
+  rectangle: 0x07,
   solidColor: 0x12,
   blackboard: 0x17,
   fill: 0x14,

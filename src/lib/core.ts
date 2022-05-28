@@ -2,6 +2,8 @@ export enum DepriveObjectType {
   Artboard = 'Artboard',
   Fill = 'Fill',
   SolidColor = 'SolidColor',
+  Rectangle = 'Rectangle',
+  Ellipse = 'Ellipse',
 }
 
 export enum DeprivePropertyType {

@@ -1,4 +1,5 @@
 import { DepriveObject, DepriveObjectType } from './core'
+import { Ellipse } from './ellipse'
 import { Fill } from './fill'
 import { Origin, Point, Size } from './misc'
 
@@ -15,6 +16,8 @@ export class Artboard implements DepriveObject {
   _clip: boolean = true
   _fills: Fill[] = []
 
+  _shapes: DepriveObject[] = []
+
   constructor(id: number) {
     this.id = id
   }
@@ -29,7 +32,7 @@ export class Artboard implements DepriveObject {
     return this
   }
 
-  size(size: Size): Artboard {
+  size(size: { width: number; height: number }): Artboard {
     this._size = size
     return this
   }
@@ -52,6 +55,12 @@ export class Artboard implements DepriveObject {
   fill(fill: Fill): Artboard {
     fill.parent = this
     this._fills.push(fill)
+    return this
+  }
+
+  ellipse(ellipse: Ellipse): Artboard {
+    ellipse.parent = this
+    this._shapes.push(ellipse)
     return this
   }
 }

@@ -2,7 +2,9 @@ import { Animation } from './anim/animation'
 import { Artboard } from './artboard'
 import { Color } from './color'
 import { IdGenerator } from './core'
+import { Ellipse } from './ellipse'
 import { Fill } from './fill'
+import { Point, Size } from './misc'
 
 export class Deprive implements IdGenerator {
   private _id: number = 0
@@ -14,6 +16,10 @@ export class Deprive implements IdGenerator {
     const artborard = new Artboard(this.nextId()).name(name)
     this.artboards.push(artborard)
     return artborard
+  }
+
+  ellipse(size: Size, position: Point): Ellipse {
+    return new Ellipse(this.nextId(), null, size, position, this)
   }
 
   fill(color: Color): Fill {

@@ -58,10 +58,7 @@ export class Animation implements DepriveEntity {
     return this
   }
 
-  line<A extends Animatable<A>>(
-    prop: Animatable<A>,
-    keys: { frame: number; value: A }[]
-  ): Animation {
+  line<A>(prop: Animatable<A>, keys: { frame: number; value: A }[]): Animation {
     this._lines.push(new AnimationLine(prop, keys))
     return this
   }
