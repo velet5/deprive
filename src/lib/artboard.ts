@@ -1,7 +1,8 @@
 import { DepriveObject, DepriveObjectType } from './core'
-import { Ellipse } from './ellipse'
+import { Ellipse } from './shape/ellipse'
 import { Fill } from './fill'
 import { Origin, Point, Size } from './misc'
+import { Shape } from './shape/shape'
 
 export class Artboard implements DepriveObject {
   id: number
@@ -16,7 +17,7 @@ export class Artboard implements DepriveObject {
   _clip: boolean = true
   _fills: Fill[] = []
 
-  _shapes: DepriveObject[] = []
+  _shapes: Shape[] = []
 
   constructor(id: number) {
     this.id = id

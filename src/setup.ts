@@ -17,11 +17,16 @@ export const make = (): Deprive => {
   const headPosition = new Point(canvasCenter.x, headSide / 2)
 
   const head = D.ellipse(headSize, headPosition)
+  const whatever = D.ellipse(
+    headSize,
+    new Point(canvasCenter.x, canvasCenter.y)
+  )
 
   D.artboard('canvas')
     .size({ width: canvasSide, height: canvasSide })
     .fill(fill)
     .ellipse(head)
+    .ellipse(whatever)
 
   D.animation('move-head')
     .pingPong()

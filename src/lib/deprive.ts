@@ -2,7 +2,7 @@ import { Animation } from './anim/animation'
 import { Artboard } from './artboard'
 import { Color } from './color'
 import { IdGenerator } from './core'
-import { Ellipse } from './ellipse'
+import { Ellipse } from './shape/ellipse'
 import { Fill } from './fill'
 import { Point, Size } from './misc'
 

@@ -1,5 +1,5 @@
-import { DepriveObject, DepriveObjectType } from './core'
-import { Point, Size } from './misc'
+import { DepriveObject, DepriveObjectType } from '../core'
+import { Point, Size } from '../misc'
 
 export class Rectangle implements DepriveObject {
   type = DepriveObjectType.Rectangle
