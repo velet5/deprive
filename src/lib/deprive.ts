@@ -1,27 +1,23 @@
-import { Artboard } from './artboard'
-import { DepriveObject, IdGenerator } from './core'
 import { Animation } from './anim/animation'
+import { Artboard } from './artboard'
 import { Color } from './color'
+import { IdGenerator } from './core'
 import { Fill } from './fill'
 
 export class Deprive implements IdGenerator {
   private _id: number = 0
 
-  private _objects: DepriveObject[] = []
+  private artboards: Artboard[] = []
   private _animations: Animation[] = []
 
-  listObjects(): DepriveObject[] {
-    return this._objects
-  }
-
   artboard(name: string): Artboard {
-    const artborard = new Artboard(this.nextId(), this).name(name)
-    this._objects.push(artborard)
+    const artborard = new Artboard(this.nextId()).name(name)
+    this.artboards.push(artborard)
     return artborard
   }
 
   fill(color: Color): Fill {
-    return new Fill(this.nextId(), null, null, this).color(color)
+    return new Fill(this.nextId(), null, this).color(color)
   }
 
   nextId(): number {
@@ -37,5 +33,9 @@ export class Deprive implements IdGenerator {
 
   listAnimations(): Animation[] {
     return this._animations
+  }
+
+  listArtboards(): Artboard[] {
+    return this.artboards
   }
 }

@@ -1,4 +1,3 @@
-import { AnimationKey } from './lib/anim/key'
 import { Color } from './lib/color'
 import { Deprive } from './lib/deprive'
 import { DepriveRiveExporter } from './lib/export/DepriveRiveExporter'
@@ -13,10 +12,12 @@ export const make = (): Deprive => {
 
   D.artboard('canvas').fill(fill)
 
-  D.animation('change-color').line(fill.getColor(), [
-    new AnimationKey(0, red),
-    new AnimationKey(60, green),
-  ])
+  D.animation('change-color')
+    .oneShot()
+    .line(fill.getColor(), [
+      { frame: 0, value: red },
+      { frame: 60, value: green },
+    ])
 
   return D
 }

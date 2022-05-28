@@ -1,11 +1,11 @@
 import { Leb128 } from '../../util/leb128'
 import { Artboard } from '../artboard'
-import { DepriveObjectType } from '../core'
+import { DepriveEntity, DepriveObject, DepriveObjectType } from '../core'
 import { Deprive } from '../deprive'
 import { Fill } from '../fill'
 import { DepriveExporter } from './DepriveExporter'
 import { Animation, AnimationType } from '../anim/animation'
-import { Color } from '../color'
+import { Color, DepriveColor } from '../color'
 
 const ids = {
   artboard: 0x01,
@@ -47,45 +47,81 @@ const animation_type = {
 
 export class DepriveRiveExporter implements DepriveExporter {
   export(deprive: Deprive): Uint8Array {
-    const buffer = new Buffer()
+    return new ExportImpl(deprive).export()
+  }
+}
 
+class ExportImpl {
+  private id2id: { [id: number]: number } = {}
+
+  private order: DepriveEntity[] = []
+
+  private buffer = new Buffer()
+
+  constructor(private deprive: Deprive) {}
+
+  export(): Uint8Array {
+    this.writeHeader()
+
+    // blackboard (whatever that is)
+    this.buffer.writeVarUint(ids.blackboard).writeVarUint(0x00)
+
+    const entities = new Flatter(this.deprive).order()
+
+    entities.forEach((entity, index) => {
+      this.id2id[entity.id] = index
+    })
+
+    entities.forEach((entity) => {
+      console.log(
+        `Writing entity ${entity.id}(${this.getId(entity.id)}): ${entity.type}`
+      )
+      switch (entity.type) {
+        case DepriveObjectType.Artboard:
+          this.writeArtboard(entity as Artboard)
+          break
+
+        case DepriveObjectType.Fill:
+          this.writeFill(entity as Fill)
+          break
+
+        case DepriveObjectType.SolidColor:
+          this.writeSolidColor(entity as DepriveColor)
+          break
+
+        default:
+          break
+      }
+    })
+
+    this.buffer.writeZero()
+
+    this.deprive
+      .listAnimations()
+      .forEach((animation) => this.writeAnimation(animation))
+
+    return this.buffer.toUint8Array()
+  }
+
+  private remember(entity: DepriveEntity): void {
+    const len = this.order.length
+    this.order.push(entity)
+    this.id2id[entity.id] = len
+  }
+
+  private writeHeader() {
     // header
-    buffer
+    this.buffer
       .writeArray(this.fingerprint)
       .writeVarUint(this.major)
       .writeVarUint(this.minor)
       .writeVarUint(this.fileId)
-      .writeVarUint(0x00) // header terminator
-
-    // blackboard (whatever that is)
-    buffer.writeVarUint(ids.blackboard).writeVarUint(0x00)
-
-    // artboards
-    deprive
-      .listObjects()
-      .filter((o) => o.type === DepriveObjectType.Artboard)
-      .forEach((artboard) => this.writeArtboard(buffer, artboard as Artboard))
-
-    // colors
-    deprive
-      .listObjects()
-      .filter((o) => o.type === DepriveObjectType.Artboard)
-      .forEach((artboard) =>
-        (artboard as Artboard)._fills.forEach((fill) =>
-          this.writeFill(buffer, fill)
-        )
-      )
-
-    buffer.writeZero()
-
-    deprive
-      .listAnimations()
-      .forEach((animation) => this.writeAnimation(buffer, animation))
-
-    return buffer.toUint8Array()
+      .writeZero() // header terminator
   }
 
-  private writeAnimation(buffer: Buffer, animation: Animation): void {
+  private writeAnimation(animation: Animation): void {
+    const buffer = this.buffer
+
     buffer.write(ids.linearAnimation)
     buffer.write(properties.animationName)
     buffer.writeString(animation._name)
@@ -108,7 +144,7 @@ export class DepriveRiveExporter implements DepriveExporter {
     animation._lines.forEach((line) => {
       buffer.write(ids.keyedObject)
       buffer.write(properties.keyedObjectId)
-      buffer.write(0x01)
+      buffer.write(this.getId(line.property.id))
       buffer.writeZero()
       buffer.write(ids.keyedProperty)
       buffer.write(properties.keyedPropertyProperty)
@@ -130,6 +166,17 @@ export class DepriveRiveExporter implements DepriveExporter {
     })
   }
 
+  private writeSolidColor(color: DepriveColor): void {
+    const buffer = this.buffer
+    buffer.write(ids.solidColor)
+
+    this.writeParent(color.parent?.id)
+
+    buffer.write(properties.colorValue)
+    this.writeColorValue(buffer, color)
+    buffer.writeZero()
+  }
+
   private writeColorValue(buffer: Buffer, color: Color): void {
     buffer.write(color.b)
     buffer.write(color.g)
@@ -137,23 +184,27 @@ export class DepriveRiveExporter implements DepriveExporter {
     buffer.write(Math.floor((color.a / 100) * 255))
   }
 
-  private writeFill(buffer: Buffer, fill: Fill): void {
-    buffer.write(ids.solidColor)
-
-    buffer.write(properties.parentId)
-    buffer.writeVarUint(0x02) // FIXME
-
-    const color = fill.getColor()
-    buffer.write(properties.colorValue)
-    this.writeColorValue(buffer, color)
-    buffer.writeZero()
+  private writeFill(fill: Fill): void {
+    const buffer = this.buffer
 
     buffer.write(ids.fill)
-    buffer.write(properties.parentId)
-    buffer.write(0x00) // FIXME
+    this.writeParent(fill.parent?.id)
   }
 
-  private writeArtboard(buffer: Buffer, artboard: Artboard): void {
+  private writeParent(parentId: number | undefined): void {
+    const id = this.getId(parentId)
+
+    console.log(`parentId: ${parentId} - ${id}`)
+
+    this.buffer.write(properties.parentId)
+    this.buffer.write(this.getId(parentId))
+  }
+
+  private writeArtboard(artboard: Artboard): void {
+    const buffer = this.buffer
+
+    this.remember(artboard)
+
     buffer.write(ids.artboard)
     buffer.write(properties.name)
     buffer.writeString(artboard._name)
@@ -172,6 +223,13 @@ export class DepriveRiveExporter implements DepriveExporter {
   private writeHeight(buffer: Buffer, height: number): void {
     buffer.write(properties.height)
     buffer.writeFloat(height)
+  }
+
+  private getId(entityId: number | undefined): number {
+    if (entityId == null) {
+      throw new Error('entityId is null')
+    }
+    return this.id2id[entityId]
   }
 
   private fingerprint = [0x52, 0x49, 0x56, 0x45]
@@ -229,5 +287,28 @@ class Buffer {
 
   toUint8Array(): Uint8Array {
     return new Uint8Array(this.buffer)
+  }
+}
+
+class Flatter {
+  private entities: DepriveObject[] = []
+
+  constructor(private deprive: Deprive) {}
+
+  order(): DepriveObject[] {
+    this.deprive.listArtboards().forEach((artboard) => {
+      this.remember(artboard)
+
+      artboard._fills.forEach((fill) => {
+        this.remember(fill.getColor())
+        this.remember(fill)
+      })
+    })
+
+    return this.entities
+  }
+
+  remember(entity: DepriveObject) {
+    this.entities.push(entity)
   }
 }

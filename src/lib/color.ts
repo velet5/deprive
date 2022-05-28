@@ -1,5 +1,5 @@
-import { DepriveObject, DepriveProperty, DeprivePropertyType } from './core'
 import { Animatable } from './anim/animatable'
+import { DepriveObject, DepriveObjectType } from './core'
 
 export class Color {
   r: number
@@ -25,22 +25,15 @@ export class Color {
 
 export class DepriveColor
   extends Color
-  implements DepriveProperty, Animatable<Color>
+  implements DepriveObject, Animatable<Color>
 {
   id: number
-  type: DeprivePropertyType = DeprivePropertyType.Color
-  parent: DepriveProperty | null
-  object: DepriveObject | null
+  type: DepriveObjectType = DepriveObjectType.SolidColor
+  parent: DepriveObject
 
-  constructor(
-    id: number,
-    parent: DepriveProperty | null,
-    object: DepriveObject | null,
-    c: Color
-  ) {
+  constructor(id: number, parent: DepriveObject, c: Color) {
     super(c.r, c.g, c.b, c.a)
     this.id = id
     this.parent = parent
-    this.object = object
   }
 }

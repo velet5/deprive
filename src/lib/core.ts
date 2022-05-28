@@ -1,11 +1,12 @@
 export enum DepriveObjectType {
-  Artboard = 1,
+  Artboard = 'Artboard',
+  Fill = 'Fill',
+  SolidColor = 'SolidColor',
 }
 
 export enum DeprivePropertyType {
   Fill = 1,
   Color,
-  Opacity,
 }
 
 export enum DepriveEntityType {
