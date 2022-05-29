@@ -20,6 +20,8 @@
   width: 400px;
   border: 1px solid gray;
   display: inline-block;
+  max-height: 600px;
+  overflow-y: auto;
 }
 
 #tree {
@@ -28,6 +30,8 @@
   vertical-align: top;
   border: 1px solid gray;
   padding: 5px;
+  max-height: 600px;
+  overflow-y: scroll;
 }
 
 #download {

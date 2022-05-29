@@ -209,6 +209,7 @@ export class RivTreeVisualizer {
 
       case 0x1a:
         type = RivObjectType.KeyedProperty
+        break
 
       case 0x1e:
         type = RivObjectType.KeyFrameDouble
