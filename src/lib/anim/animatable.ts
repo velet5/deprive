@@ -10,3 +10,7 @@ export enum AnimatableProperty {
   Point = 'Point',
   Color = 'Color',
 }
+
+export enum FramValueType {
+  Double = 'double',
+}

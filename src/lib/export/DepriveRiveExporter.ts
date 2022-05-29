@@ -1,16 +1,15 @@
 import { Leb128 } from '../../util/leb128'
+import { AnimatableProperty, FramValueType } from '../anim/animatable'
+import { Animation, AnimationType } from '../anim/animation'
+import { AnimationKey } from '../anim/key'
 import { Artboard } from '../artboard'
-import { DepriveEntity, DepriveObject, DepriveObjectType } from '../core'
+import { Color, DepriveColor } from '../color'
+import { DepriveEntity, DepriveObject } from '../core'
 import { Deprive } from '../deprive'
 import { Fill } from '../fill'
-import { DepriveExporter } from './DepriveExporter'
-import { Animation, AnimationType } from '../anim/animation'
-import { Color, DepriveColor } from '../color'
 import { Ellipse } from '../shape/ellipse'
 import { Shape } from '../shape/shape'
-import { AnimationLine } from '../anim/line'
-import { AnimatableProperty } from '../anim/animatable'
-import { LoopType } from '@rive-app/canvas'
+import { DepriveExporter } from './DepriveExporter'
 
 const ids = {
   artboard: 0x01,
@@ -22,6 +21,7 @@ const ids = {
   fill: 0x14,
   keyedObject: 0x19,
   keyedProperty: 0x1a,
+  keyFrameDouble: 0x1e,
   linearAnimation: 0x1f,
 }
 
@@ -41,11 +41,7 @@ const properties = {
   animationType: 0x3b,
   frame: 0x43,
   interpolationType: 0x44,
-}
-
-const keyframes = {
-  color: 0x25,
-  colorValue: 0x58,
+  frameValue: 0x46,
 }
 
 const interpolation = {
@@ -64,8 +60,6 @@ export class DepriveRiveExporter implements DepriveExporter {
 }
 
 class ExportImpl {
-  private order: DepriveEntity[] = []
-
   private buffer = new Buffer()
 
   constructor(private deprive: Deprive) {}
@@ -104,9 +98,7 @@ class ExportImpl {
       }
     })
 
-    this.deprive
-      .listAnimations()
-      .forEach((animation) => this.writeAnimation(animation))
+    flatResult.animations.forEach((animation) => this.writeAnimation(animation))
 
     return this.buffer.toUint8Array()
   }
@@ -146,14 +138,14 @@ class ExportImpl {
       .writeZero() // header terminator
   }
 
-  private writeAnimation(animation: Animation): void {
+  private writeAnimation(animation: ExportAnimation): void {
     const buffer = this.buffer
 
     buffer.write(ids.linearAnimation)
     buffer.write(properties.animationName)
-    buffer.writeString(animation._name)
+    buffer.writeString(animation.name)
 
-    switch (animation._type) {
+    switch (animation.type) {
       case AnimationType.Loop:
         buffer.write(properties.animationType)
         buffer.write(animation_type.loop)
@@ -168,20 +160,84 @@ class ExportImpl {
 
     buffer.writeZero()
 
-    animation._lines.forEach((line) => {
-      switch (line.property.animProperty) {
-        case AnimatableProperty.X:
-          this.writeAnimationLine<number>(line)
-          break
-      }
-    })
+    animation.lines.forEach((line) => this.writeAnimationLine(line))
   }
 
-  private writeAnimationLine<A>(line: AnimationLine<A>): void {
+  private writeAnimationLine(line: ExportAnimationLine): void {
     const buffer = this.buffer
 
     buffer.write(ids.keyedObject)
     buffer.write(properties.keyedObjectId)
+    buffer.writeVarUint(line.objectId.id)
+    buffer.writeZero()
+
+    buffer.write(ids.keyedProperty)
+    buffer.write(properties.keyedPropertyProperty)
+    buffer.write(this.codeForAnimatableProperty(line.property))
+    buffer.writeZero()
+
+    line.frames.forEach((frame) => this.writeAnimationFrame(frame))
+  }
+
+  private writeAnimationFrame(frame: ExportAnimationFrame): void {
+    const buffer = this.buffer
+    let code: number
+
+    switch (frame.frameType) {
+      case ExportFrameType.Double:
+        code = ids.keyFrameDouble
+        break
+
+      default:
+        throw new Error(`Unsupported frame type: ${frame.frameType}`)
+    }
+
+    buffer.write(code)
+    if (frame.frame != 0) {
+      buffer.write(properties.frame)
+      buffer.writeVarUint(frame.frame)
+    }
+
+    switch (frame.interpolationType) {
+      case AnimationInterpolationType.Linear:
+        buffer.write(properties.interpolationType)
+        buffer.write(interpolation.linear)
+        break
+
+      default:
+        throw new Error(
+          'Unknown interpolation type: ' + frame.interpolationType
+        )
+    }
+
+    this.writeAnimationFrameValue(frame.value)
+
+    buffer.writeZero()
+  }
+
+  private writeAnimationFrameValue(value: ExportAnimationFrameValue): void {
+    const buffer = this.buffer
+
+    if (value.double) {
+      buffer.write(properties.frameValue)
+      buffer.writeFloat(value.double)
+    } else if (value.color) {
+      throw new Error('Color values not supported')
+    }
+  }
+
+  private codeForAnimatableProperty(prop: AnimatableProperty): number {
+    switch (prop) {
+      case AnimatableProperty.X:
+        return 0x0d
+        break
+
+      case AnimatableProperty.Y:
+        return 0x0e
+        break
+    }
+
+    throw new Error(`Unsupported animatable property: ${prop}`)
   }
 
   private writeSolidColor(color: DepriveColor, parentId: ExportId): void {
@@ -304,6 +360,10 @@ enum ExportType {
   Fill = 0x14,
 }
 
+enum AnimationInterpolationType {
+  Linear = 'Linear',
+}
+
 class ExportId {
   constructor(public id: number) {}
 }
@@ -317,7 +377,53 @@ class ExportObject {
   ) {}
 }
 
-class ExportAnimation {}
+class ExportAnimation {
+  constructor(
+    public name: string,
+    public type: AnimationType,
+    public duration: number | null,
+    public snapKeys: number | null,
+    public lines: ExportAnimationLine[]
+  ) {}
+}
+
+class ExportAnimationFrameValue {
+  double: number | null = null
+  color: Color | null = null
+
+  static float(f: number): ExportAnimationFrameValue {
+    const v = new ExportAnimationFrameValue()
+    v.double = f
+    return v
+  }
+
+  static color(c: Color): ExportAnimationFrameValue {
+    const v = new ExportAnimationFrameValue()
+    v.color = c
+    return v
+  }
+}
+
+class ExportAnimationLine {
+  constructor(
+    public objectId: ExportId,
+    public property: AnimatableProperty,
+    public frames: ExportAnimationFrame[]
+  ) {}
+}
+
+enum ExportFrameType {
+  Double = 1,
+}
+
+class ExportAnimationFrame {
+  constructor(
+    public frame: number,
+    public value: ExportAnimationFrameValue,
+    public interpolationType: AnimationInterpolationType,
+    public frameType: ExportFrameType
+  ) {}
+}
 
 class FlatResult {
   constructor(
@@ -375,8 +481,72 @@ class Flatter {
     return new FlatResult(this.entities, exportAnimations)
   }
 
+  private exportKeyFrame<A>(key: AnimationKey<A>): ExportAnimationFrame {
+    let type: ExportFrameType
+
+    switch (key.valueType) {
+      case FramValueType.Double:
+        type = ExportFrameType.Double
+        break
+
+      default:
+        throw new Error(`Unsupported value type: ${key.valueType}`)
+    }
+
+    return new ExportAnimationFrame(
+      key.frame,
+      ExportAnimationFrameValue.float(key.value as unknown as number),
+      AnimationInterpolationType.Linear,
+      type
+    )
+  }
+
   private animations(): ExportAnimation[] {
-    return []
+    return this.deprive.listAnimations().map((animation) => {
+      const lines = animation._lines.map((line) => {
+        const objectid = this.findParentExportId(line.property)
+        const frames = line.keys.map(this.exportKeyFrame)
+        return new ExportAnimationLine(
+          objectid,
+          line.property.animProperty,
+          frames
+        )
+      })
+
+      return new ExportAnimation(
+        animation._name,
+        animation._type,
+        animation._duration == Animation.DefaultDuration
+          ? null
+          : animation._duration,
+        animation._snapKeys == Animation.DefaultSnapKeys
+          ? null
+          : animation._snapKeys,
+        lines
+      )
+    })
+  }
+
+  private findParentExportId(entity: DepriveEntity): ExportId {
+    let p: DepriveEntity = entity
+
+    while (true) {
+      console.log(p)
+      if (p.parent == null) {
+        break
+      }
+      if (p instanceof Ellipse) {
+        break
+      }
+      p = p.parent
+    }
+
+    const parent = this.entities.find((e) => e.entity.id === p.id)
+    if (parent == null) {
+      throw new Error(`Parent not found for entity ${entity.id}`)
+    }
+
+    return parent.id
   }
 
   remember(type: ExportType, entity: DepriveObject): ExportObject {

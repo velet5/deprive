@@ -16,20 +16,31 @@ export const make = (): Deprive => {
   const blue = Color.fromHex('#0000FF')
   const black = Color.fromHex('#000000')
 
-  const head = D.ellipse(headSize, headPosition).color(blue)
-  const whatever = D.ellipse(headSize, canvasCenter).color(black)
+  const blueEllipse = D.ellipse(headSize, headPosition).color(blue)
+  const blackEllipse = D.ellipse(headSize, canvasCenter).color(black)
 
   D.artboard('canvas')
     .size({ width: canvasSide, height: canvasSide })
-    .ellipse(head)
-    .ellipse(whatever)
+    .ellipse(blueEllipse)
+    .ellipse(blackEllipse)
 
-  D.animation('move-head')
+  const halfHead = headSide / 2
+
+  D.animation('move')
     .duration(1000)
     .pingPong()
-    .line(head.position().x, [
-      { frame: 0, value: canvasCenter.x },
-      { frame: 60, value: canvasSide - headSide / 2 },
+    .line(blueEllipse.position().x, [
+      { frame: 0, value: halfHead },
+      { frame: 60, value: canvasSide - halfHead },
+    ])
+    .line(blueEllipse.position().y, [
+      { frame: 0, value: halfHead },
+      { frame: 30, value: canvasSide - halfHead },
+      { frame: 60, value: halfHead },
+    ])
+    .line(blackEllipse.position().x, [
+      { frame: 0, value: canvasSide - halfHead },
+      { frame: 60, value: halfHead },
     ])
 
   return D

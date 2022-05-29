@@ -18,7 +18,7 @@ export class RivTreeVisualizer {
     return []
   }
 
-  private parseProperty(): RivProperty | null {
+  private parseProperty(valueType: RivValueType): RivProperty | null {
     const code = this.array[this.position++]
 
     if (code === 0) return null
@@ -77,6 +77,11 @@ export class RivTreeVisualizer {
         value = this.readId()
         break
 
+      case 0x35:
+        type = RivPropertyType.KeyedPropertyCode
+        value = this.readProperty()
+        break
+
       case 0x37:
         type = RivPropertyType.AnimationName
         value = this.parseString()
@@ -87,6 +92,21 @@ export class RivTreeVisualizer {
         value = this.parseEnum('loopType')
         break
 
+      case 0x43:
+        type = RivPropertyType.KeyFrameNumber
+        value = this.parseUvarInt()
+        break
+
+      case 0x44:
+        type = RivPropertyType.InterpolationType
+        value = this.parseEnum('interpolationType')
+        break
+
+      case 0x46:
+        type = RivPropertyType.FrameValue
+        value = this.readValue(valueType)
+        break
+
       default:
         type = RivPropertyType.Unknown
         value = new RivNumber(0)
@@ -94,6 +114,27 @@ export class RivTreeVisualizer {
     }
 
     return new RivProperty(code, type, value)
+  }
+
+  private parseByte(): RivValue {
+    const byte = this.array[this.position++]
+    return new RivNumber(byte)
+  }
+
+  private readValue(valueType: RivValueType): RivValue {
+    switch (valueType) {
+      case RivValueType.Float:
+        return this.parseFloat()
+        break
+
+      default:
+        throw new Error(`Unsupported value type ${valueType}`)
+    }
+  }
+
+  private readProperty(): RivPropertyValue {
+    const byte = this.array[this.position++]
+    return new RivPropertyValue(byte)
   }
 
   private parseEnum(name: string): RivEnum {
@@ -137,6 +178,7 @@ export class RivTreeVisualizer {
     const code = this.array[this.position++]
 
     let type: RivObjectType
+    let valueType: RivValueType = RivValueType.Float
     switch (code) {
       case 0x17:
         type = RivObjectType.Blackboard
@@ -165,6 +207,14 @@ export class RivTreeVisualizer {
         type = RivObjectType.KeyedObject
         break
 
+      case 0x1a:
+        type = RivObjectType.KeyedProperty
+
+      case 0x1e:
+        type = RivObjectType.KeyFrameDouble
+        valueType = RivValueType.Float
+        break
+
       case 0x1f:
         type = RivObjectType.LinearAnimation
         break
@@ -177,7 +227,7 @@ export class RivTreeVisualizer {
     let properties: RivProperty[] = []
 
     while (true) {
-      const p = this.parseProperty()
+      const p = this.parseProperty(valueType)
 
       if (p == null) {
         break
@@ -272,6 +322,14 @@ export class RiveHeader {
 
 export interface RivValue {}
 
+export class RivPropertyValue implements RivValue {
+  public constructor(public value: number) {}
+
+  public toString(): string {
+    return this.value.toString(16).padStart(2, '0')
+  }
+}
+
 export class RivFloat implements RivValue {
   constructor(public value: number) {}
 
@@ -282,6 +340,10 @@ export class RivFloat implements RivValue {
 
 export class RivNumber implements RivValue {
   constructor(public value: number) {}
+
+  public toString(): string {
+    return `${this.value}`
+  }
 }
 
 export class RivString implements RivValue {
@@ -352,11 +414,16 @@ export enum RivPropertyType {
   ShapeY = 'shapeY',
   Parent = 'parent',
   LoopType = 'loopType',
+  KeyFrameNumber = 'keyFrameNumber',
   KeyedObjectId = 'keyedObjectId',
-  KeyedPropertyProperty = 'keyedPropertyProperty',
+  KeyedPropertyCode = 'keyedPropertyCode',
   InterpolationType = 'interpolationType',
   FrameValue = 'frameValue',
   Frame = 'frame',
   Unknown = 'unknown',
   ColorValue = 'colorValue',
+}
+
+export enum RivValueType {
+  Float = 'float',
 }

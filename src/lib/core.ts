@@ -19,6 +19,7 @@ export enum DepriveEntityType {
 
 export interface DepriveEntity {
   id: number
+  parent: DepriveEntity | null
 }
 
 export interface DepriveObject extends DepriveEntity {

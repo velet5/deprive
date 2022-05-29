@@ -1,9 +1,9 @@
-export class AnimationKey<A> {
-  frame: number
-  value: A
+import { FramValueType } from './animatable'
 
-  constructor(frame: number, value: A) {
-    this.frame = frame
-    this.value = value
-  }
+export class AnimationKey<A> {
+  constructor(
+    public frame: number,
+    public value: A,
+    public valueType: FramValueType
+  ) {}
 }

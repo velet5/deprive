@@ -1,7 +1,7 @@
 import { DepriveEntity } from '../core'
 import { AnimationKey } from './key'
 import { AnimationLine } from './line'
-import { Animatable } from './animatable'
+import { Animatable, AnimatableProperty, FramValueType } from './animatable'
 
 export enum AnimationType {
   OneShot = 1,
@@ -12,9 +12,14 @@ export enum AnimationType {
 export class Animation implements DepriveEntity {
   id: number
 
+  static DefaultDuration = 1000
+  static DefaultSnapKeys = 60
+
+  parent = null
+
   _name: string = 'animation'
-  _duration: number = 1000
-  _snapKeys: number = 60
+  _duration: number = Animation.DefaultDuration
+  _snapKeys: number = Animation.DefaultSnapKeys
   _type: AnimationType = AnimationType.OneShot
 
   _lines: AnimationLine<any>[] = []
@@ -59,7 +64,26 @@ export class Animation implements DepriveEntity {
   }
 
   line<A>(prop: Animatable<A>, keys: { frame: number; value: A }[]): Animation {
-    this._lines.push(new AnimationLine(prop, keys))
+    let frameValueType: FramValueType
+    switch (prop.animProperty) {
+      case AnimatableProperty.X:
+      case AnimatableProperty.Y:
+        frameValueType = FramValueType.Double
+        break
+      default:
+        throw new Error(
+          `No support for animatable property ${prop.animProperty}`
+        )
+    }
+
+    this._lines.push(
+      new AnimationLine(
+        prop,
+        keys.map(
+          (key) => new AnimationKey(key.frame, key.value, frameValueType)
+        )
+      )
+    )
     return this
   }
 }
