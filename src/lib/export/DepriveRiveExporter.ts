@@ -8,6 +8,9 @@ import { Animation, AnimationType } from '../anim/animation'
 import { Color, DepriveColor } from '../color'
 import { Ellipse } from '../shape/ellipse'
 import { Shape } from '../shape/shape'
+import { AnimationLine } from '../anim/line'
+import { AnimatableProperty } from '../anim/animatable'
+import { LoopType } from '@rive-app/canvas'
 
 const ids = {
   artboard: 0x01,
@@ -73,7 +76,9 @@ class ExportImpl {
     // blackboard (whatever that is)
     this.buffer.writeVarUint(ids.blackboard).writeZero()
 
-    const entities = new Flatter(this.deprive).order()
+    const flatResult = new Flatter(this.deprive).order()
+
+    const entities = flatResult.objects
 
     entities.forEach(({ parentId, type, entity }) => {
       switch (type) {
@@ -98,8 +103,6 @@ class ExportImpl {
           break
       }
     })
-
-    this.buffer.writeZero()
 
     this.deprive
       .listAnimations()
@@ -165,29 +168,20 @@ class ExportImpl {
 
     buffer.writeZero()
 
-    // animation._lines.forEach((line) => {
-    //   buffer.write(ids.keyedObject)
-    //   buffer.write(properties.keyedObjectId)
-    //   buffer.write(0x02) // FIXME
-    //   buffer.writeZero()
-    //   buffer.write(ids.keyedProperty)
-    //   buffer.write(properties.keyedPropertyProperty)
-    //   buffer.write(properties.colorValue)
-    //   buffer.writeZero()
-    //   line.keys.forEach((key) => {
-    //     buffer.write(keyframes.color)
-    //     if (key.frame != 0) {
-    //       buffer.write(properties.frame)
-    //       buffer.writeVarUint(key.frame)
-    //     }
-    //     buffer.write(properties.interpolationType)
-    //     buffer.write(interpolation.linear)
-    //     buffer.write(keyframes.colorValue)
-    //     this.writeColorValue(buffer, key.value as Color)
+    animation._lines.forEach((line) => {
+      switch (line.property.animProperty) {
+        case AnimatableProperty.X:
+          this.writeAnimationLine<number>(line)
+          break
+      }
+    })
+  }
 
-    //     buffer.writeZero()
-    //   })
-    // })
+  private writeAnimationLine<A>(line: AnimationLine<A>): void {
+    const buffer = this.buffer
+
+    buffer.write(ids.keyedObject)
+    buffer.write(properties.keyedObjectId)
   }
 
   private writeSolidColor(color: DepriveColor, parentId: ExportId): void {
@@ -213,6 +207,7 @@ class ExportImpl {
 
     buffer.write(ids.fill)
     this.writeParent(parentId)
+    buffer.writeZero()
   }
 
   private writeParent(parentId: ExportId): void {
@@ -246,7 +241,7 @@ class ExportImpl {
   private fingerprint = [0x52, 0x49, 0x56, 0x45]
   private major = 7
   private minor = 0
-  private fileId = 1337
+  private fileId = 1338
 }
 
 class Buffer {
@@ -322,6 +317,15 @@ class ExportObject {
   ) {}
 }
 
+class ExportAnimation {}
+
+class FlatResult {
+  constructor(
+    public objects: ExportObject[],
+    public animations: ExportAnimation[]
+  ) {}
+}
+
 class Flatter {
   private id: number = 0
 
@@ -333,7 +337,7 @@ class Flatter {
 
   constructor(private deprive: Deprive) {}
 
-  order(): ExportObject[] {
+  order(): FlatResult {
     this.deprive.listArtboards().forEach((artboard) => {
       const fills: {
         parentId: ExportId
@@ -366,7 +370,13 @@ class Flatter {
       })
     })
 
-    return this.entities
+    const exportAnimations = this.animations()
+
+    return new FlatResult(this.entities, exportAnimations)
+  }
+
+  private animations(): ExportAnimation[] {
+    return []
   }
 
   remember(type: ExportType, entity: DepriveObject): ExportObject {

@@ -6,9 +6,6 @@ import { Point, Size } from './lib/misc'
 export const make = (): Deprive => {
   const D = new Deprive()
 
-  const red = new Color(255, 0, 0)
-  const fill = D.fill(red)
-
   const canvasSide = 1000
   const canvasCenter = new Point(canvasSide / 2, canvasSide / 2)
 
@@ -16,19 +13,19 @@ export const make = (): Deprive => {
   const headSize = new Size(headSide, headSide)
   const headPosition = new Point(canvasCenter.x, headSide / 2)
 
-  const head = D.ellipse(headSize, headPosition)
-  const whatever = D.ellipse(
-    headSize,
-    new Point(canvasCenter.x, canvasCenter.y)
-  )
+  const blue = Color.fromHex('#0000FF')
+  const black = Color.fromHex('#000000')
+
+  const head = D.ellipse(headSize, headPosition).color(blue)
+  const whatever = D.ellipse(headSize, canvasCenter).color(black)
 
   D.artboard('canvas')
     .size({ width: canvasSide, height: canvasSide })
-    .fill(fill)
     .ellipse(head)
     .ellipse(whatever)
 
   D.animation('move-head')
+    .duration(1000)
     .pingPong()
     .line(head.position().x, [
       { frame: 0, value: canvasCenter.x },

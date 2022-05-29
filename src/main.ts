@@ -1,35 +1,68 @@
 import * as rive from '@rive-app/canvas'
-import * as monaco from 'monaco-editor'
-import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
-import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker'
-import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker'
-import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
-import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
+import {
+  RiveHeader,
+  RivObject,
+  RivParsingResult,
+  RivProperty,
+  RivTreeVisualizer,
+} from './parse/RivTreeVisualizer'
 import { exportRive, make } from './setup'
 import './style.css'
 
-const w: any = self
+const visualize = (elem: HTMLElement, array: Uint8Array) => {
+  let parsed: RivParsingResult
 
-w.MonacoEnvironment = {
-  getWorker(_: any, label: string) {
-    if (label === 'json') {
-      return new jsonWorker()
+  try {
+    parsed = new RivTreeVisualizer(array).parse()
+  } catch (e) {
+    if (e instanceof Error) {
+      elem.innerText = e.message
+    } else {
+      elem.innerText = String(e)
     }
-    if (label === 'css' || label === 'scss' || label === 'less') {
-      return new cssWorker()
-    }
-    if (label === 'html' || label === 'handlebars' || label === 'razor') {
-      return new htmlWorker()
-    }
-    if (label === 'typescript' || label === 'javascript') {
-      return new tsWorker()
-    }
-    return new editorWorker()
-  },
+    return
+  }
+
+  const addHeader = (header: RiveHeader): HTMLElement => {
+    const el = document.createElement('div')
+    el.classList.add('riv-header')
+    el.innerText = `${header.fingerprint} ${header.major}.${header.minor} ${header.fileId}`
+    return el
+  }
+
+  const addProperty = (property: RivProperty): HTMLElement => {
+    const el = document.createElement('div')
+    el.classList.add('riv-property')
+
+    el.innerText = `${zpad(property.code)} ${property.type} ${property.value}`
+    return el
+  }
+
+  const zpad = (n: number) => {
+    return n.toString(16).padStart(2, '0')
+  }
+
+  const addObject = (object: RivObject): HTMLElement => {
+    const el = document.createElement('div')
+    el.classList.add('riv-object')
+    el.innerText = `${zpad(object.code)} ${object.type}`
+
+    object.properties.forEach((property) => {
+      const propEl = addProperty(property)
+      el.appendChild(propEl)
+    })
+    return el
+  }
+
+  elem.appendChild(addHeader(parsed.header))
+  parsed.objects.forEach((object) => elem.appendChild(addObject(object)))
+
+  console.log(parsed)
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  const element = document.getElementById('editor')!
+  const str = document.getElementById('string')!
+  const tree = document.getElementById('tree')!
   const canvas = document.getElementById('canvas')!
 
   const playAnimation = (url: string) => {
@@ -45,10 +78,15 @@ window.addEventListener('DOMContentLoaded', () => {
     })
   }
 
-  const editor = monaco.editor.create(element, {
-    language: 'javascript',
-    wordWrap: 'on',
-  })
+  const download = (url: string) => {
+    const a = document.createElement('a')
+    a.id = 'download'
+    a.href = url
+    a.download = 'rive.riv'
+    a.innerText = 'download'
+
+    document.body.append(a)
+  }
 
   const deprive = make()
   const bytes = exportRive(deprive)
@@ -64,10 +102,12 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   const s = arr.map(zpad).join(' ')
-
-  editor.setValue(s)
+  str.innerText = s
 
   const blob = new Blob([bytes], { type: 'application/rive' })
   const url = URL.createObjectURL(blob)
   playAnimation(url)
+  download(url)
+
+  visualize(tree, bytes)
 })

@@ -7,19 +7,43 @@
   margin-top: 60px;
 }
 
-#editor {
-  vertical-align: top;
-  text-align: left;
-  width: 600px;
-  height: 800px;
-  display: inline-block;
-  border: 1px solid gray;
-}
-
 #canvas {
   vertical-align: top;
   display: inline-block;
   border: 1px solid gray;
-  width: 600px;
-  height: 300px;
+  width: 1000;
+  height: 1000;
+}
+
+#string {
+  font-family: 'Courier New', Courier, monospace;
+  width: 400px;
+  border: 1px solid gray;
+  display: inline-block;
+}
+
+#tree {
+  display: inline-block;
+  font-family: 'Courier New', Courier, monospace;
+  vertical-align: top;
+  border: 1px solid gray;
+  padding: 5px;
+}
+
+#download {
+  display: block;
+  margin-top: 20px;
+}
+
+.riv-object {
+  font-weight: bold;
+}
+
+.riv-property {
+  font-weight: normal;
+}
+
+.riv-property:before {
+  content: '|- ';
+  display: inline;
 }

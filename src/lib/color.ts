@@ -1,4 +1,4 @@
-import { Animatable } from './anim/animatable'
+import { Animatable, AnimatableProperty } from './anim/animatable'
 import { DepriveObject, DepriveObjectType } from './core'
 
 export class Color {
@@ -11,7 +11,7 @@ export class Color {
     this.r = r
     this.g = g
     this.b = b
-    this.a = a || 100
+    this.a = a === 0 ? 0 : a || 100
   }
 
   static fromHex(hex: string, a?: number): Color {
@@ -30,6 +30,7 @@ export class DepriveColor
   id: number
   type: DepriveObjectType = DepriveObjectType.SolidColor
   parent: DepriveObject
+  animProperty: AnimatableProperty = AnimatableProperty.Color
 
   constructor(id: number, parent: DepriveObject, c: Color) {
     super(c.r, c.g, c.b, c.a)

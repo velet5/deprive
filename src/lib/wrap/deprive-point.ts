@@ -1,4 +1,4 @@
-import { Animatable } from '../anim/animatable'
+import { Animatable, AnimatableProperty } from '../anim/animatable'
 import { DepriveObject } from '../core'
 import { Point } from '../misc'
 
@@ -6,6 +6,8 @@ export class DeprivePoint implements Animatable<Point> {
   id: number
   x: DepriveX
   y: DepriveY
+
+  animProperty: AnimatableProperty = AnimatableProperty.Point
 
   constructor(
     public parent: DepriveObject,
@@ -26,6 +28,7 @@ export class DepriveX implements Animatable<number> {
     public parent: DepriveObject,
     public x: number
   ) {}
+  animProperty: AnimatableProperty = AnimatableProperty.X
 }
 
 export class DepriveY implements Animatable<number> {
@@ -34,4 +37,6 @@ export class DepriveY implements Animatable<number> {
     public parent: DepriveObject,
     public y: number
   ) {}
+
+  animProperty: AnimatableProperty = AnimatableProperty.Y
 }
