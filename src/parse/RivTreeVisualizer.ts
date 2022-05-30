@@ -4,18 +4,19 @@ export class RivTreeVisualizer {
   constructor(private array: Uint8Array) {}
 
   public parse(): RivParsingResult {
-    const header = this.parseHeader()
-    let objects = this.parseObjects()
+    let objects = []
+    try {
+      const header = this.parseHeader()
 
-    while (this.position < this.array.length) {
-      objects.push(this.parseObject())
+      while (this.position < this.array.length) {
+        objects.push(this.parseObject())
+      }
+
+      return new RivParsingResult(header, objects)
+    } catch (e) {
+      console.log(objects)
+      throw new Error(`Error parsing RIV file: ${e}`)
     }
-
-    return new RivParsingResult(header, objects)
-  }
-
-  private parseObjects(): RivObject[] {
-    return []
   }
 
   private parseProperty(valueType: RivValueType): RivProperty | null {
@@ -94,7 +95,7 @@ export class RivTreeVisualizer {
 
       case 0x43:
         type = RivPropertyType.KeyFrameNumber
-        value = this.parseUvarInt()
+        value = this.parseUnsignedVarInt()
         break
 
       case 0x44:
@@ -170,7 +171,7 @@ export class RivTreeVisualizer {
   }
 
   private readId(): RivId {
-    const id = this.parseUvarInt()
+    const id = this.parseUnsignedVarInt()
     return new RivId(id)
   }
 
@@ -244,7 +245,9 @@ export class RivTreeVisualizer {
     const position = this.position++
     const value = this.array[position]
     if (value !== 0) {
-      throw new Error(`Expected 0, got ${value} at position ${position}`)
+      throw new Error(
+        `Expected 0, got ${value.toString(16)} at position ${position}`
+      )
     }
   }
 
@@ -252,25 +255,78 @@ export class RivTreeVisualizer {
     const fingerprint = this.parseStringValue(4)
     const major = this.array[this.position++]
     const minor = this.array[this.position++]
-    const fileId = this.parseUvarInt()
-    this.readZero()
+    const fileId = this.parseUnsignedVarInt()
+
+    let propertyKeys = []
+
+    while (true) {
+      const propertyKey = this.parseUnsignedVarInt()
+      if (propertyKey === 0) {
+        break
+      }
+
+      propertyKeys.push(propertyKey)
+    }
+
+    // int currentInt = 0;
+    // int currentBit = 8;
+    // for (auto propertyKey : propertyKeys) {
+    //     if (currentBit == 8) {
+    //         currentInt = reader.readUint32();
+    //         currentBit = 0;
+    //     }
+    //     int fieldIndex = (currentInt >> currentBit) & 3;
+    //     header.m_PropertyToFieldIndex[propertyKey] = fieldIndex;
+    //     currentBit += 2;
+    //     if (reader.didOverflow()) {
+    //         return false;
+    //     }
+    // }
+
+    let int = 0
+    let bit = 8
+
+    for (let i = 0; i < propertyKeys.length; i++) {
+      if (bit === 8) {
+        int = this.parseUint32()
+        bit = 0
+      }
+    }
 
     return new RiveHeader(fingerprint, major, minor, fileId)
   }
 
-  private parseUvarInt(): number {
+  private peek(): number {
+    return this.array[this.position]
+  }
+
+  private parseUint32(): number {
+    const a = this.array[this.position++]
+    const b = this.array[this.position++]
+    const c = this.array[this.position++]
+    const d = this.array[this.position++]
+
+    const buf = new ArrayBuffer(4)
+    const view = new DataView(buf)
+    view.setInt8(0, a)
+    view.setInt8(1, b)
+    view.setInt8(2, c)
+    view.setInt8(3, d)
+
+    const v = view.getUint32(0, true)
+
+    return v
+  }
+
+  private parseUnsignedVarInt(): number {
     let result = 0
     let shift = 0
-
-    while (true) {
-      const byte = this.array[this.position++]
+    let byte: number
+    do {
+      byte = this.array[this.position++]
       result |= (byte & 0x7f) << shift
-      if ((byte & 0x80) === 0) {
-        break
-      }
       shift += 7
-    }
-
+    } while (byte & 0x80)
     return result
   }
 
