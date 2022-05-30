@@ -45,9 +45,23 @@
 
 .riv-property {
   font-weight: normal;
+  cursor: pointer;
+}
+
+.riv-property__hover {
+  background-color: #c5c5c5;
 }
 
 .riv-property:before {
   content: '|- ';
   display: inline;
+}
+
+.byte {
+  display: inline-block;
+  padding: 1px 2px;
+}
+
+.byte-hover {
+  background-color: #a3b151;
 }

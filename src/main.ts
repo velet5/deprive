@@ -1,6 +1,6 @@
 import * as rive from '@rive-app/canvas'
 import {
-  RiveHeader,
+  RivHeader,
   RivObject,
   RivParsingResult,
   RivProperty,
@@ -25,7 +25,7 @@ const visualize = (elem: HTMLElement, array: Uint8Array) => {
     return
   }
 
-  const addHeader = (header: RiveHeader): HTMLElement => {
+  const addHeader = (header: RivHeader): HTMLElement => {
     const el = document.createElement('div')
     el.classList.add('riv-header')
     el.innerText = `${header.fingerprint} ${header.major}.${header.minor} ${header.fileId}`
@@ -37,6 +37,25 @@ const visualize = (elem: HTMLElement, array: Uint8Array) => {
     el.classList.add('riv-property')
 
     el.innerText = `${zpad(property.code)} ${property.type} ${property.value}`
+    el.onmouseover = () => {
+      el.classList.add('riv-property__hover')
+      for (let i = property.start; i < property.finish; i++) {
+        const el = document.getElementById(`byte-${i}`)
+        if (el) {
+          el.classList.add('byte-hover')
+        }
+      }
+    }
+
+    el.onmouseleave = () => {
+      el.classList.remove('riv-property__hover')
+      for (let i = property.start; i < property.finish; i++) {
+        const el = document.getElementById(`byte-${i}`)
+        if (el) {
+          el.classList.remove('byte-hover')
+        }
+      }
+    }
     return el
   }
 
@@ -112,8 +131,19 @@ window.addEventListener('DOMContentLoaded', () => {
       return s.length === 1 ? '0' + s : s
     }
 
-    const s = arr.map(zpad).join(' ')
-    str.innerText = s
+    str.innerHTML = ''
+    let block: HTMLElement
+    arr.forEach((n, index) => {
+      if (index % 16 === 0) {
+        block = document.createElement('div')
+        str.appendChild(block)
+      }
+      const el = document.createElement('span')
+      el.classList.add('byte')
+      el.id = `byte-${index}`
+      el.innerText = zpad(n)
+      block.appendChild(el)
+    })
 
     playAnimation(canvas, url)
     download(url)
