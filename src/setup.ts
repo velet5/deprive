@@ -75,7 +75,7 @@ export const make = (): Deprive => {
   D.animation('move')
     .duration(1000)
     .pingPong()
-    .line(head.position().x, [{ frame: 0, value: headPos.x }])
+    .line(head.position().x(), [{ frame: 0, value: headPos.x }])
 
   return D
 }

@@ -139,9 +139,9 @@ class ExportImpl {
     this.writeParent(parentId)
 
     buffer.write(properties.shapeX)
-    buffer.writeFloat(shape.position().x.value)
+    buffer.writeFloat(shape.position().x().value)
     buffer.write(properties.shapeY)
-    buffer.writeFloat(shape.position().y.y)
+    buffer.writeFloat(shape.position().y().value)
     buffer.writeZero()
   }
 

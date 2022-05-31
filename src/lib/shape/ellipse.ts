@@ -38,6 +38,9 @@ export class Ellipse implements Shape {
         this.generator.nextId()
       )
     }
+    this._dPosition.x(this._position.x)
+    this._dPosition.y(this._position.y)
+
     return this._dPosition
   }
 
