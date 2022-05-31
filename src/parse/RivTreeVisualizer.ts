@@ -8,8 +8,13 @@ export class RivTreeVisualizer {
     try {
       const header = this.parseHeader()
 
+      let index = 0
       while (this.position < this.array.length) {
-        objects.push(this.parseObject(header.toc))
+        const object = this.parseObject(header.toc, index)
+        objects.push(object)
+        if (object.type != RivObjectType.Blackboard) {
+          index += 1
+        }
       }
 
       return new RivParsingResult(header, objects)
@@ -142,8 +147,58 @@ export class RivTreeVisualizer {
         value = this.parseFloat()
         break
 
+      case 0x5a:
+        type = RivPropertyType.BoneX
+        value = this.parseFloat()
+        break
+
       case 0x5b:
-        type = RivPropertyType.SourceId
+        type = RivPropertyType.BoneY
+        value = this.parseFloat()
+        break
+
+      case 0x5f:
+        type = RivPropertyType.BoneId
+        value = this.readId()
+        break
+
+      case 0x60:
+        type = RivPropertyType.TendonXx
+        value = this.parseFloat()
+        break
+
+      case 0x61:
+        type = RivPropertyType.TendonYx
+        value = this.parseFloat()
+        break
+
+      case 0x62:
+        type = RivPropertyType.TendonXy
+        value = this.parseFloat()
+        break
+
+      case 0x63:
+        type = RivPropertyType.TendonYy
+        value = this.parseFloat()
+        break
+
+      case 0x64:
+        type = RivPropertyType.TendonTx
+        value = this.parseFloat()
+        break
+
+      case 0x65:
+        type = RivPropertyType.TendonTy
+        value = this.parseFloat()
+        break
+
+      case 0x6c:
+        type = RivPropertyType.Tx
+        value = this.parseFloat()
+        break
+
+      case 0x6d:
+        type = RivPropertyType.Ty
         value = this.parseFloat()
         break
 
@@ -174,11 +229,9 @@ export class RivTreeVisualizer {
     switch (valueType) {
       case RivValueType.Uint:
         return new RivNumber(this.parseUnsignedVarInt())
-        break
 
       case RivValueType.Float:
         return this.parseFloat()
-        break
 
       default:
         throw new Error(`Unsupported value type ${valueType}`)
@@ -227,7 +280,7 @@ export class RivTreeVisualizer {
     return new RivId(id)
   }
 
-  private parseObject(toc: RivToc): RivObject {
+  private parseObject(toc: RivToc, index: number): RivObject {
     const start = this.position
     const code = this.array[this.position++]
 
@@ -299,6 +352,18 @@ export class RivTreeVisualizer {
         type = RivObjectType.Bone
         break
 
+      case 0x2b:
+        type = RivObjectType.Skin
+        break
+
+      case 0x2c:
+        type = RivObjectType.Tendon
+        break
+
+      case 0x2d:
+        type = RivObjectType.Weight
+        break
+
       default:
         type = RivObjectType.Unknown
         break
@@ -318,7 +383,7 @@ export class RivTreeVisualizer {
 
     const finish = this.position
 
-    return new RivObject(code, type, properties, start, finish)
+    return new RivObject(index, code, type, properties, start, finish)
   }
 
   private parseHeader(): RivHeader {
@@ -417,6 +482,7 @@ export class RivParsingResult {
 
 export class RivObject {
   constructor(
+    readonly id: number,
     public code: number,
     public type: RivObjectType,
     public properties: RivProperty[],
@@ -569,6 +635,10 @@ export enum RivObjectType {
   BoneBase = 'BoneBase',
   PointsPath = 'PointsPath',
   StraightVertex = 'StraightVertex',
+  Component = 'Component',
+  Skin = 'Skin',
+  Weight = 'Weight',
+  Tendon = 'Tendon',
 }
 
 export enum RivPropertyType {
@@ -594,10 +664,20 @@ export enum RivPropertyType {
   CornerRadiusTL = 'cornerRadiusTL',
   Rotation = 'Rotation',
   BoneLength = 'BoneLength',
-  SourceId = 'SourceId',
+  BoneY = 'BoneY',
   IsClosed = 'IsClosed',
   VertexX = 'VertexX',
   VertexY = 'VertexY',
+  BoneX = 'BoneX',
+  Tx = 'Tx',
+  Ty = 'Ty',
+  BoneId = 'BoneId',
+  TendonXx = 'TendonXx',
+  TendonYx = 'TendonYx',
+  TendonXy = 'TendonXy',
+  TendonYy = 'TendonYy',
+  TendonTx = 'TendonTx',
+  TendonTy = 'TendonTy',
 }
 
 export enum RivValueType {

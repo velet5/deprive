@@ -66,7 +66,7 @@ const visualize = (elem: HTMLElement, array: Uint8Array) => {
   const addObject = (object: RivObject): HTMLElement => {
     const el = document.createElement('div')
     el.classList.add('riv-object')
-    el.innerText = `${zpad(object.code)} ${object.type}`
+    el.innerText = `${zpad(object.code)} ${object.type} (${zpad(object.id)})`
 
     object.properties.forEach((property) => {
       const propEl = addProperty(property)
