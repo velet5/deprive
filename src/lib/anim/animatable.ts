@@ -1,5 +1,6 @@
 import { DepriveEntity } from '../core'
 
+//@ts-ignore
 export interface Animatable<A> extends DepriveEntity {
   animProperty: AnimatableProperty
 }

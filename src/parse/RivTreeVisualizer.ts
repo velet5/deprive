@@ -321,16 +321,6 @@ export class RivTreeVisualizer {
     return new RivObject(code, type, properties, start, finish)
   }
 
-  private readZero(): void {
-    const position = this.position++
-    const value = this.array[position]
-    if (value !== 0) {
-      throw new Error(
-        `Expected 0, got ${value.toString(16)} at position ${position}`
-      )
-    }
-  }
-
   private parseHeader(): RivHeader {
     const fingerprint = this.parseStringValue(4)
     const major = this.array[this.position++]
@@ -371,10 +361,6 @@ export class RivTreeVisualizer {
       fileId,
       new RivToc(propertyToFieldIndex)
     )
-  }
-
-  private peek(): number {
-    return this.array[this.position]
   }
 
   private parseUint32(): number {

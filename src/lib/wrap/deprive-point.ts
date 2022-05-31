@@ -26,7 +26,7 @@ export class DepriveX implements Animatable<number> {
   constructor(
     public id: number,
     public parent: DepriveObject,
-    public x: number
+    public value: number
   ) {}
   animProperty: AnimatableProperty = AnimatableProperty.X
 }

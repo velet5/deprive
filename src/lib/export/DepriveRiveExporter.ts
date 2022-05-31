@@ -89,7 +89,7 @@ class ExportImpl {
           break
 
         case ExportType.Fill:
-          this.writeFill(entity as Fill, parentId!)
+          this.writeFill(parentId!)
           break
 
         case ExportType.SolidColor:
@@ -122,7 +122,7 @@ class ExportImpl {
     this.writeParent(parentId)
 
     buffer.write(properties.shapeX)
-    buffer.writeFloat(shape.position().x.x)
+    buffer.writeFloat(shape.position().x.value)
     buffer.write(properties.shapeY)
     buffer.writeFloat(shape.position().y.y)
     buffer.writeZero()
@@ -258,7 +258,7 @@ class ExportImpl {
     buffer.write(Math.floor((color.a / 100) * 255))
   }
 
-  private writeFill(fill: Fill, parentId: ExportId): void {
+  private writeFill(parentId: ExportId): void {
     const buffer = this.buffer
 
     buffer.write(ids.fill)
@@ -337,8 +337,6 @@ class Buffer {
     const arr = new Uint8Array(fs.buffer)
     this.writeArray(arr)
   }
-
-  writeBoolean(b: boolean) {}
 
   writeArray(a: number[] | Uint8Array): Buffer {
     a.forEach((n) => {
