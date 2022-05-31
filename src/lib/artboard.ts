@@ -3,6 +3,7 @@ import { Ellipse } from './shape/ellipse'
 import { Fill } from './fill'
 import { Origin, Point, Size } from './misc'
 import { Shape } from './shape/shape'
+import { Rectangle } from './shape/rect'
 
 export class Artboard implements DepriveObject {
   id: number
@@ -62,6 +63,12 @@ export class Artboard implements DepriveObject {
   ellipse(ellipse: Ellipse): Artboard {
     ellipse.parent = this
     this._shapes.push(ellipse)
+    return this
+  }
+
+  rectangle(rectangle: Rectangle): Artboard {
+    rectangle.parent = this
+    this._shapes.push(rectangle)
     return this
   }
 }

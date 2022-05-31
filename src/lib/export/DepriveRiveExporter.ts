@@ -8,6 +8,7 @@ import { DepriveEntity, DepriveObject } from '../core'
 import { Deprive } from '../deprive'
 import { Fill } from '../fill'
 import { Ellipse } from '../shape/ellipse'
+import { Rectangle } from '../shape/rect'
 import { Shape } from '../shape/shape'
 import { DepriveExporter } from './DepriveExporter'
 
@@ -88,6 +89,10 @@ class ExportImpl {
           this.writeEllipse(entity as Ellipse, parentId!)
           break
 
+        case ExportType.Rectangle:
+          this.writeRectangle(entity as Rectangle, parentId!)
+          break
+
         case ExportType.Fill:
           this.writeFill(parentId!)
           break
@@ -101,6 +106,18 @@ class ExportImpl {
     flatResult.animations.forEach((animation) => this.writeAnimation(animation))
 
     return this.buffer.toUint8Array()
+  }
+
+  private writeRectangle(rectangle: Rectangle, parentId: ExportId) {
+    const buffer = this.buffer
+
+    buffer.write(ids.rectangle)
+    this.writeParent(parentId)
+    buffer.write(properties.shapeWidth)
+    buffer.writeFloat(rectangle.size().width)
+    buffer.write(properties.shapeHeight)
+    buffer.writeFloat(rectangle.size().height)
+    buffer.writeZero()
   }
 
   private writeEllipse(ellipse: Ellipse, parentId: ExportId) {
@@ -354,6 +371,7 @@ enum ExportType {
   Artboard = 0x01,
   Shape = 0x03,
   Ellipse = 0x04,
+  Rectangle = 0x07,
   SolidColor = 0x12,
   Fill = 0x14,
 }
@@ -463,6 +481,11 @@ class Flatter {
         if (shape instanceof Ellipse) {
           const ellipseExported = this.remember(ExportType.Ellipse, shape)
           ellipseExported.parentId = shapeExported.id
+        } else if (shape instanceof Rectangle) {
+          const rectangleExported = this.remember(ExportType.Rectangle, shape)
+          rectangleExported.parentId = shapeExported.id
+        } else {
+          throw new Error(`Unsupported shape: ${shape.constructor.name}`)
         }
       })
 
@@ -534,6 +557,9 @@ class Flatter {
         break
       }
       if (p instanceof Ellipse) {
+        break
+      }
+      if (p instanceof Rectangle) {
         break
       }
       p = p.parent

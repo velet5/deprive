@@ -5,6 +5,7 @@ import { IdGenerator } from './core'
 import { Ellipse } from './shape/ellipse'
 import { Fill } from './fill'
 import { Point, Size } from './misc'
+import { Rectangle } from './shape/rect'
 
 export class Deprive implements IdGenerator {
   private _id: number = 0
@@ -20,6 +21,10 @@ export class Deprive implements IdGenerator {
 
   ellipse(size: Size, position: Point): Ellipse {
     return new Ellipse(this.nextId(), null, size, position, this)
+  }
+
+  rectangle(size: Size, position: Point): Rectangle {
+    return new Rectangle(this.nextId(), null, size, position, this)
   }
 
   fill(color: Color): Fill {
