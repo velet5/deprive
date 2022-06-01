@@ -63,7 +63,7 @@ export class Animation implements DepriveEntity {
     return this
   }
 
-  line<A>(prop: Animatable<A>, keys: { frame: number; value: A }[]): Animation {
+  line<A>(prop: Animatable<A>, keys: { [key: number]: A }): Animation {
     let frameValueType: FramValueType
     switch (prop.animProperty) {
       case AnimatableProperty.X:
@@ -76,14 +76,16 @@ export class Animation implements DepriveEntity {
         )
     }
 
-    this._lines.push(
-      new AnimationLine(
-        prop,
-        keys.map(
-          (key) => new AnimationKey(key.frame, key.value, frameValueType)
-        )
-      )
-    )
+    let animKeys = [] as AnimationKey<A>[]
+
+    for (const prop in keys) {
+      const frame = Number(prop)
+      const value = keys[prop]
+      console.log(frame, value)
+      animKeys.push(new AnimationKey(frame, value, frameValueType))
+    }
+
+    this._lines.push(new AnimationLine(prop, animKeys))
     return this
   }
 }

@@ -98,8 +98,8 @@ const playAnimation = (canvas: HTMLElement, url: string) => {
     canvas: canvas,
     autoplay: true,
     layout: new rive.Layout({
-      fit: rive.Fit.Contain,
-      alignment: rive.Alignment.Center,
+      fit: rive.Fit.Cover,
+      alignment: rive.Alignment.TopRight,
     }),
   })
 }
