@@ -1,37 +1,24 @@
-import { Color } from './lib/color'
-import { Deprive } from './lib/deprive'
-import { DepriveRiveExporter } from './lib/export/DepriveRiveExporter'
-import { Point, Size } from './lib/misc'
+import { Deprive } from './comp/deprive'
+import { Color } from './comp/misc/color'
+import { Point } from './comp/misc/point'
+import { Size } from './comp/misc/size'
 
 export const make = (): Deprive => {
   const D = new Deprive()
 
-  const black = Color.fromHex('#000000')
-  const blue = Color.fromHex('#0000ff')
-
   const x = 100
-  const canvasSide = 10 * x
+  const canvaseSize = new Size(x * 10, x * 10)
+  const rectSize = new Size(x * 2, x * 2)
+  const black = D.solidFill(new Color(0, 0, 0, 100))
 
-  const canvasCenter = new Point(canvasSide / 2, canvasSide / 2)
-  const headSize = new Size(2 * x, 2 * x)
-  const headPos = new Point(canvasCenter.x, x)
-  const head = D.ellipse(headSize, headPos).color(black)
-  const torso = D.rectangle(new Size(2 * x, 2 * x), headPos).color(blue)
+  const artboard = D.artboard(Point.Zero, canvaseSize)
+  const rectangle = D.rectangle(Point.Zero, rectSize).fill(black)
 
-  D.artboard('canvas')
-    .size({ width: canvasSide, height: canvasSide })
-    .ellipse(head)
-    .rectangle(torso)
-
-  D.animation('move')
-    .pingPong()
-    .line(head.position().y(), { 0: x, 60: x * 9 })
-    .line(torso.position().x(), { 0: x, 60: x * 9 })
+  D.nest(artboard, rectangle)
 
   return D
 }
 
 export const exportRive = (d: Deprive): Uint8Array => {
-  const exporter = new DepriveRiveExporter()
-  return exporter.export(d)
+  return new Uint8Array()
 }
