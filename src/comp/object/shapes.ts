@@ -2,7 +2,11 @@ import { CompId } from '../id'
 import { Fill } from './fill'
 import { DepriveObject } from './object'
 
-export interface Shape extends DepriveObject {}
+export interface Shape extends DepriveObject {
+  readonly id: CompId
+  readonly x: number
+  readonly y: number
+}
 
 export class Rectangle implements Shape {
   constructor(

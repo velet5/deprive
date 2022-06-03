@@ -9,8 +9,11 @@ export class RivHeaderWriter {
   constructor() {}
 
   write(buffer: Buffer, fileId: number) {
+    console.log(buffer)
     buffer.addBytes(this.fingerprint)
+    console.log(1)
     buffer.addVarUint(this.major)
+    console.log(buffer)
     buffer.addVarUint(this.minor)
     buffer.addVarUint(fileId)
     buffer.addZero()

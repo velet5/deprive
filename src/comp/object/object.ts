@@ -9,7 +9,7 @@ export interface DepriveObject extends Identifiable {}
 export class Nesting {
   constructor(
     readonly parent: DepriveObject,
-    private children: DepriveObject[]
+    readonly children: DepriveObject[]
   ) {}
 
   add(child: DepriveObject): Nesting {

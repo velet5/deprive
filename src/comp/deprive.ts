@@ -19,7 +19,10 @@ export class Deprive {
     if (index === -1) {
       this.nestings.push(new Nesting(parent, [child]))
     } else {
-      this.nestings[index].add(child)
+      this.nestings[index] = new Nesting(parent, [
+        ...this.nestings[index].children,
+        child,
+      ])
     }
     return this
   }
@@ -52,5 +55,9 @@ export class Deprive {
 
   solidFill(color: Color): Fill {
     return new SolidColorFill(this.idProvider.gen(), color)
+  }
+
+  getAllNestings(): Nesting[] {
+    return this.nestings
   }
 }

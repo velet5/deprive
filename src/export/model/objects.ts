@@ -2,7 +2,7 @@ export interface RivObject {}
 
 export class RivBlackBoard implements RivObject {}
 
-export class RivArtBoard implements RivObject {
+export class RivArtboard implements RivObject {
   constructor(readonly width: number, readonly height: number) {}
 }
 

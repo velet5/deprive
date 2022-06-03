@@ -12,7 +12,7 @@ export class Buffer {
   }
 
   addBytes(bytes: number[] | Uint8Array) {
-    bytes.forEach(this.addByte)
+    bytes.forEach((byte) => this.addByte(byte))
   }
 
   addString(string: string) {
