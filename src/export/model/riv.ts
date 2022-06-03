@@ -1,5 +1,5 @@
 import { RivObject } from './objects'
 
 export class Riv {
-  constructor(readonly objects: RivObject[]) {}
+  constructor(readonly objects: { parentId: number; object: RivObject }[]) {}
 }

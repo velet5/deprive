@@ -14,8 +14,10 @@ export const make = (): Deprive => {
 
   const artboard = D.artboard(Point.Zero, canvaseSize)
   const rectangle = D.rectangle(Point.Zero, rectSize).fill(black)
+  const rectangle2 = D.rectangle(new Point(x * 4, x * 5), rectSize).fill(black)
 
   D.nest(artboard, rectangle)
+  D.nest(rectangle, rectangle2)
 
   return D
 }
