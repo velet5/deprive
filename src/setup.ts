@@ -2,6 +2,7 @@ import { Deprive } from './comp/deprive'
 import { Color } from './comp/misc/color'
 import { Point } from './comp/misc/point'
 import { Size } from './comp/misc/size'
+import { RivExporter } from './export/exporter'
 
 export const make = (): Deprive => {
   const D = new Deprive()
@@ -20,5 +21,7 @@ export const make = (): Deprive => {
 }
 
 export const exportRive = (d: Deprive): Uint8Array => {
-  return new Uint8Array()
+  const exporter = new RivExporter()
+
+  return exporter.export(d)
 }
