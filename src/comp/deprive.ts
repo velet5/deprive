@@ -3,6 +3,7 @@ import { Color } from './misc/color'
 import { Point } from './misc/point'
 import { Size } from './misc/size'
 import { Artboard } from './object/artboard'
+import { Bone, BoneSystem, PrimaryBone, SecondaryBone } from './object/bone'
 import { Fill, SolidColorFill } from './object/fill'
 import { DepriveObject, Nesting } from './object/object'
 import { Rectangle } from './object/shapes'
@@ -59,5 +60,54 @@ export class Deprive {
 
   getAllNestings(): Nesting[] {
     return this.nestings
+  }
+
+  bones(position: Point, length: number, rotation: number): PrimaryBone
+  bones(
+    position: Point,
+    length: number,
+    rotation: number,
+    ...secondary: { length: number; rotation: number }[]
+  ): BoneSystem
+  bones(
+    position: Point,
+    length: number,
+    rotation: number,
+    ...secondary: { length: number; rotation: number }[]
+  ): BoneSystem | PrimaryBone {
+    const primary = new PrimaryBone(
+      this.idProvider.gen(),
+      position.x,
+      position.y,
+      length,
+      rotation
+    )
+    if (secondary.length === 0) {
+      return primary
+    }
+
+    let parentId = primary.id
+    let parent: Bone = primary
+    let index = 0
+    const secondaries = []
+    while (true) {
+      const boneId = this.idProvider.gen()
+      const bone = new SecondaryBone(
+        boneId,
+        parentId,
+        secondary[index].length,
+        secondary[index].rotation
+      )
+      secondaries.push(bone)
+      this.nest(parent, bone)
+      parentId = boneId
+      parent = bone
+      index += 1
+      if (index === secondary.length) {
+        break
+      }
+    }
+
+    return new BoneSystem(primary, secondaries)
   }
 }

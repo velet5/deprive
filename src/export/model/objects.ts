@@ -31,3 +31,16 @@ export class RivSolidColor implements RivObject {
 export class RivFill implements RivObject {
   constructor() {}
 }
+
+export class RivBone implements RivObject {
+  constructor(
+    readonly x: number,
+    readonly y: number,
+    readonly length: number,
+    readonly rotation: number
+  ) {}
+}
+
+export class RivBoneBase implements RivObject {
+  constructor(readonly length: number, readonly rotation: number) {}
+}
