@@ -1,3 +1,4 @@
+import { AnimatableProperty, Animation, AnimationType } from './anim/animation'
 import { IdProvider } from './id'
 import { Color } from './misc/color'
 import { Point } from './misc/point'
@@ -7,11 +8,14 @@ import { Bone, BoneSystem, PrimaryBone, SecondaryBone } from './object/bone'
 import { Fill, SolidColorFill } from './object/fill'
 import { DepriveObject, Nesting } from './object/object'
 import { Rectangle } from './object/shapes'
+import { AnimationLine } from './anim/animation'
 
 export class Deprive {
   private idProvider = new IdProvider()
 
   private nestings: Nesting[] = []
+
+  private animations: DepriveAnimation[] = []
 
   constructor() {}
 
@@ -62,6 +66,24 @@ export class Deprive {
     return this.nestings
   }
 
+  getAllAnimations(): Animation[] {
+    return this.animations.map((animation) => {
+      const type = animation.getIsLoop()
+        ? AnimationType.loop
+        : animation.getIsPingPong()
+        ? AnimationType.pingPong
+        : AnimationType.oneShot
+
+      return new Animation(animation.name, type, animation.getAllLines())
+    })
+  }
+
+  animation(name: string): DepriveAnimation {
+    const animation = new DepriveAnimation(name)
+    this.animations.push(animation)
+    return animation
+  }
+
   bones(position: Point, length: number, rotation: number): PrimaryBone
   bones(
     position: Point,
@@ -109,5 +131,50 @@ export class Deprive {
     }
 
     return new BoneSystem(primary, secondaries)
+  }
+}
+
+export class DepriveAnimation {
+  private lines: AnimationLine<any>[] = []
+  private isLoop = false
+  private isPingPong = false
+
+  constructor(readonly name: string) {}
+
+  line<A>(
+    object: DepriveObject,
+    property: AnimatableProperty,
+    frames: { [key: number]: A }
+  ) {
+    const fs = []
+    for (const [frameNumber, value] of Object.entries(frames)) {
+      fs.push({ frameNumber: parseInt(frameNumber), value })
+    }
+    this.lines.push(new AnimationLine(object.id, property, fs))
+    return this
+  }
+
+  loop() {
+    this.isLoop = true
+    this.isPingPong = false
+    return this
+  }
+
+  pingPong() {
+    this.isPingPong = true
+    this.isLoop = false
+    return this
+  }
+
+  getAllLines(): AnimationLine<any>[] {
+    return this.lines
+  }
+
+  getIsLoop(): boolean {
+    return this.isLoop
+  }
+
+  getIsPingPong(): boolean {
+    return this.isPingPong
   }
 }

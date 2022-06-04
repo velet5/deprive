@@ -1,3 +1,4 @@
+import { Animation, AnimationLine } from '../comp/anim/animation'
 import { Deprive } from '../comp/deprive'
 import { CompId } from '../comp/id'
 import { Artboard } from '../comp/object/artboard'
@@ -5,6 +6,11 @@ import { PrimaryBone, SecondaryBone } from '../comp/object/bone'
 import { Fill, SolidColorFill } from '../comp/object/fill'
 import { DepriveObject, Nesting } from '../comp/object/object'
 import { Rectangle, Shape } from '../comp/object/shapes'
+import {
+  RivAnimation,
+  RivAnimationObject,
+  RivAnimationProperty,
+} from './model/animations'
 import {
   RivArtboard,
   RivBlackBoard,
@@ -24,6 +30,7 @@ type IntermediateEntry = {
   id: IntermediateId
   parentId: IntermediateId
   object: RivObject
+  counterpart: DepriveObject
 }
 
 export class Untangler {
@@ -59,9 +66,52 @@ export class Untangler {
     )
 
     const intermediate = this.intermediateExport(objectTree)
-    const exported = this.assignFinalIds(intermediate)
+    const intermediate2final = new Map<IntermediateId, number>()
+    const final2original = new Map<number, CompId>()
+    intermediate.forEach((entry, index) => {
+      intermediate2final.set(entry.id, index)
+      final2original.set(index, entry.counterpart.id)
+    })
 
-    return new Riv(exported)
+    const exported = this.assignFinalIds(intermediate, intermediate2final)
+    const animations = this.exportAnimations(d.getAllAnimations())
+
+    return new Riv(exported, animations)
+  }
+
+  private exportAnimations(animations: Animation[]): RivAnimation[] {
+    return animations.map((animation) => {
+      return this.exportAnimation(animation)
+    })
+  }
+
+  private exportAnimation(animation: Animation): RivAnimation {
+    const byObject = new Map<CompId, AnimationLine<any>[]>()
+
+    animation.lines.forEach((line) => {
+      const key = line.objectId
+      const lines = byObject.get(key) || []
+      lines.push(line)
+      byObject.set(key, lines)
+    })
+
+    let objects: RivAnimationObject[] = []
+
+    byObject.forEach((lines, key) => {
+      const properties = lines.map((line) =>
+        this.exportAnimationLine(line, key)
+      )
+      return new RivAnimationObject(-1, properties)
+    })
+
+    return new RivAnimation(animation.name, animation.type, objects)
+  }
+
+  private exportAnimationLine(
+    line: AnimationLine<any>,
+    compId: CompId
+  ): RivAnimationProperty {
+    return new RivAnimationProperty(-1)
   }
 
   private listObjectWithoutParent(
@@ -177,6 +227,7 @@ export class Untangler {
         id: this.nextIntermediateId(),
         parentId: -1,
         object: new RivArtboard(artboard.width, artboard.height),
+        counterpart: artboard,
       },
     ]
   }
@@ -192,6 +243,7 @@ export class Untangler {
       id: this.nextIntermediateId(),
       parentId: shape.id,
       object: new RivRectangle(rectangle.width, rectangle.height),
+      counterpart: rectangle,
     })
 
     rectangle.fills.forEach((fill) => {
@@ -209,6 +261,7 @@ export class Untangler {
       id: this.nextIntermediateId(),
       parentId,
       object: new RivBone(bone.x, bone.y, bone.length, bone.rotation),
+      counterpart: bone,
     }
   }
 
@@ -220,6 +273,7 @@ export class Untangler {
       id: this.nextIntermediateId(),
       parentId,
       object: new RivBoneBase(bone.length, bone.rotation),
+      counterpart: bone,
     }
   }
 
@@ -231,6 +285,7 @@ export class Untangler {
       id: this.nextIntermediateId(),
       parentId: parentId,
       object: new RivShape(shape.x, shape.y),
+      counterpart: shape,
     }
   }
 
@@ -253,12 +308,14 @@ export class Untangler {
           fill.color.b,
           fill.color.a
         ),
+        counterpart: fill,
       })
 
       result.push({
         id: fillId,
         parentId: parentId,
         object: new RivFill(),
+        counterpart: fill,
       })
     } else {
       throw new Error(`unhandled fill ${fill.constructor.name}`)
@@ -267,12 +324,10 @@ export class Untangler {
     return result
   }
 
-  private assignFinalIds(entries: IntermediateEntry[]): RivExportedObject[] {
-    const old2new = new Map<IntermediateId, number>()
-    entries.forEach((entry, index) => {
-      old2new.set(entry.id, index)
-    })
-
+  private assignFinalIds(
+    entries: IntermediateEntry[],
+    old2new: Map<number, number>
+  ): RivExportedObject[] {
     const result = entries.map((entry) => ({
       parentId: entry.parentId === -1 ? -1 : old2new.get(entry.parentId)!,
       object: entry.object,

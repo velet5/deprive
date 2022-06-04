@@ -1,3 +1,4 @@
+import { AnimatableProperty } from './comp/anim/animation'
 import { Deprive } from './comp/deprive'
 import { Color } from './comp/misc/color'
 import { Point } from './comp/misc/point'
@@ -33,6 +34,13 @@ export const make = (): Deprive => {
 
   D.nest(legBones.primary, thigh)
   D.nest(legBones.secondaries[0], shin)
+
+  D.animation('move')
+    .pingPong()
+    .line(legBones.primary, AnimatableProperty.Rotation, {
+      0: 90,
+      60: 0,
+    })
 
   return D
 }
