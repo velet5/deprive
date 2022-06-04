@@ -4,21 +4,31 @@ export class RivTreeVisualizer {
   constructor(private array: Uint8Array) {}
 
   public parse(): RivParsingResult {
-    const header = this.parseHeader()
-    let objects = this.parseObjects()
+    let objects = []
+    try {
+      const header = this.parseHeader()
 
-    while (this.position < this.array.length) {
-      objects.push(this.parseObject())
+      let index = 0
+      while (this.position < this.array.length) {
+        const object = this.parseObject(header.toc, index)
+        objects.push(object)
+        if (object.type != RivObjectType.Blackboard) {
+          index += 1
+        }
+      }
+
+      return new RivParsingResult(header, objects)
+    } catch (e) {
+      console.log(objects)
+      throw new Error(`Error parsing RIV file: ${e}`)
     }
-
-    return new RivParsingResult(header, objects)
   }
 
-  private parseObjects(): RivObject[] {
-    return []
-  }
-
-  private parseProperty(valueType: RivValueType): RivProperty | null {
+  private parseProperty(
+    toc: RivToc,
+    valueType: RivValueType
+  ): RivProperty | null {
+    const start = this.position
     const code = this.array[this.position++]
 
     if (code === 0) return null
@@ -57,6 +67,11 @@ export class RivTreeVisualizer {
         value = this.parseFloat()
         break
 
+      case 0x0f:
+        type = RivPropertyType.Rotation
+        value = this.parseFloat()
+        break
+
       case 0x14:
         type = RivPropertyType.ShapeWidth
         value = this.parseFloat()
@@ -65,6 +80,26 @@ export class RivTreeVisualizer {
       case 0x15:
         type = RivPropertyType.ShapeHeight
         value = this.parseFloat()
+        break
+
+      case 0x18:
+        type = RivPropertyType.VertexX
+        value = this.parseFloat()
+        break
+
+      case 0x19:
+        type = RivPropertyType.VertexY
+        value = this.parseFloat()
+        break
+
+      case 0x1f:
+        type = RivPropertyType.CornerRadiusTL
+        value = this.parseFloat()
+        break
+
+      case 0x20:
+        type = RivPropertyType.IsClosed
+        value = this.parseByte()
         break
 
       case 0x25:
@@ -94,7 +129,7 @@ export class RivTreeVisualizer {
 
       case 0x43:
         type = RivPropertyType.KeyFrameNumber
-        value = this.parseUvarInt()
+        value = this.parseUnsignedVarInt()
         break
 
       case 0x44:
@@ -107,13 +142,82 @@ export class RivTreeVisualizer {
         value = this.readValue(valueType)
         break
 
-      default:
-        type = RivPropertyType.Unknown
-        value = new RivNumber(0)
+      case 0x59:
+        type = RivPropertyType.BoneLength
+        value = this.parseFloat()
         break
+
+      case 0x5a:
+        type = RivPropertyType.BoneX
+        value = this.parseFloat()
+        break
+
+      case 0x5b:
+        type = RivPropertyType.BoneY
+        value = this.parseFloat()
+        break
+
+      case 0x5f:
+        type = RivPropertyType.BoneId
+        value = this.readId()
+        break
+
+      case 0x60:
+        type = RivPropertyType.TendonXx
+        value = this.parseFloat()
+        break
+
+      case 0x61:
+        type = RivPropertyType.TendonYx
+        value = this.parseFloat()
+        break
+
+      case 0x62:
+        type = RivPropertyType.TendonXy
+        value = this.parseFloat()
+        break
+
+      case 0x63:
+        type = RivPropertyType.TendonYy
+        value = this.parseFloat()
+        break
+
+      case 0x64:
+        type = RivPropertyType.TendonTx
+        value = this.parseFloat()
+        break
+
+      case 0x65:
+        type = RivPropertyType.TendonTy
+        value = this.parseFloat()
+        break
+
+      case 0x6c:
+        type = RivPropertyType.Tx
+        value = this.parseFloat()
+        break
+
+      case 0x6d:
+        type = RivPropertyType.Ty
+        value = this.parseFloat()
+        break
+
+      default:
+        const customProperty = toc.get(code)
+
+        if (customProperty == null) {
+          type = RivPropertyType.Unknown
+          value = new RivNumber(0)
+        } else {
+          type = RivPropertyType.Custom
+          valueType = customProperty.valueType
+          value = this.readValue(valueType)
+        }
     }
 
-    return new RivProperty(code, type, value)
+    const finish = this.position
+
+    return new RivProperty(code, type, value, start, finish)
   }
 
   private parseByte(): RivValue {
@@ -123,9 +227,11 @@ export class RivTreeVisualizer {
 
   private readValue(valueType: RivValueType): RivValue {
     switch (valueType) {
+      case RivValueType.Uint:
+        return new RivNumber(this.parseUnsignedVarInt())
+
       case RivValueType.Float:
         return this.parseFloat()
-        break
 
       default:
         throw new Error(`Unsupported value type ${valueType}`)
@@ -170,11 +276,12 @@ export class RivTreeVisualizer {
   }
 
   private readId(): RivId {
-    const id = this.parseUvarInt()
+    const id = this.parseUnsignedVarInt()
     return new RivId(id)
   }
 
-  private parseObject(): RivObject {
+  private parseObject(toc: RivToc, index: number): RivObject {
+    const start = this.position
     const code = this.array[this.position++]
 
     let type: RivObjectType
@@ -183,8 +290,13 @@ export class RivTreeVisualizer {
       case 0x17:
         type = RivObjectType.Blackboard
         break
+
       case 0x01:
         type = RivObjectType.Artboard
+        break
+
+      case 0x02:
+        type = RivObjectType.Node
         break
 
       case 0x03:
@@ -193,6 +305,18 @@ export class RivTreeVisualizer {
 
       case 0x04:
         type = RivObjectType.Ellipse
+        break
+
+      case 0x05:
+        type = RivObjectType.StraightVertex
+        break
+
+      case 0x07:
+        type = RivObjectType.Rectangle
+        break
+
+      case 0x10:
+        type = RivObjectType.PointsPath
         break
 
       case 0x12:
@@ -220,6 +344,26 @@ export class RivTreeVisualizer {
         type = RivObjectType.LinearAnimation
         break
 
+      case 0x28:
+        type = RivObjectType.BoneBase
+        break
+
+      case 0x29:
+        type = RivObjectType.Bone
+        break
+
+      case 0x2b:
+        type = RivObjectType.Skin
+        break
+
+      case 0x2c:
+        type = RivObjectType.Tendon
+        break
+
+      case 0x2d:
+        type = RivObjectType.Weight
+        break
+
       default:
         type = RivObjectType.Unknown
         break
@@ -228,7 +372,7 @@ export class RivTreeVisualizer {
     let properties: RivProperty[] = []
 
     while (true) {
-      const p = this.parseProperty(valueType)
+      const p = this.parseProperty(toc, valueType)
 
       if (p == null) {
         break
@@ -237,40 +381,80 @@ export class RivTreeVisualizer {
       properties.push(p)
     }
 
-    return new RivObject(code, type, properties)
+    const finish = this.position
+
+    return new RivObject(index, code, type, properties, start, finish)
   }
 
-  private readZero(): void {
-    const position = this.position++
-    const value = this.array[position]
-    if (value !== 0) {
-      throw new Error(`Expected 0, got ${value} at position ${position}`)
-    }
-  }
-
-  private parseHeader(): RiveHeader {
+  private parseHeader(): RivHeader {
     const fingerprint = this.parseStringValue(4)
     const major = this.array[this.position++]
     const minor = this.array[this.position++]
-    const fileId = this.parseUvarInt()
-    this.readZero()
+    const fileId = this.parseUnsignedVarInt()
 
-    return new RiveHeader(fingerprint, major, minor, fileId)
-  }
-
-  private parseUvarInt(): number {
-    let result = 0
-    let shift = 0
+    let propertyKeys = []
 
     while (true) {
-      const byte = this.array[this.position++]
-      result |= (byte & 0x7f) << shift
-      if ((byte & 0x80) === 0) {
+      const propertyKey = this.parseUnsignedVarInt()
+      if (propertyKey === 0) {
         break
       }
-      shift += 7
+
+      propertyKeys.push(propertyKey)
     }
 
+    let int = 0
+    let bit = 8
+
+    const propertyToFieldIndex: { [key: number]: number } = {}
+
+    for (let i = 0; i < propertyKeys.length; i++) {
+      if (bit === 8) {
+        int = this.parseUint32()
+        console.log(`int: ${int.toString(16)}`)
+        bit = 0
+      }
+      const fieldIndex = (int >>> bit) & 3
+      propertyToFieldIndex[propertyKeys[i]] = fieldIndex
+      bit += 2
+    }
+
+    return new RivHeader(
+      fingerprint,
+      major,
+      minor,
+      fileId,
+      new RivToc(propertyToFieldIndex)
+    )
+  }
+
+  private parseUint32(): number {
+    const a = this.array[this.position++]
+    const b = this.array[this.position++]
+    const c = this.array[this.position++]
+    const d = this.array[this.position++]
+
+    const buf = new ArrayBuffer(4)
+    const view = new DataView(buf)
+    view.setInt8(0, a)
+    view.setInt8(1, b)
+    view.setInt8(2, c)
+    view.setInt8(3, d)
+
+    const v = view.getUint32(0, true)
+
+    return v
+  }
+
+  private parseUnsignedVarInt(): number {
+    let result = 0
+    let shift = 0
+    let byte: number
+    do {
+      byte = this.array[this.position++]
+      result |= (byte & 0x7f) << shift
+      shift += 7
+    } while (byte & 0x80)
     return result
   }
 
@@ -293,14 +477,17 @@ export class RivTreeVisualizer {
 }
 
 export class RivParsingResult {
-  constructor(public header: RiveHeader, public objects: RivObject[]) {}
+  constructor(public header: RivHeader, public objects: RivObject[]) {}
 }
 
 export class RivObject {
   constructor(
+    readonly id: number,
     public code: number,
     public type: RivObjectType,
-    public properties: RivProperty[]
+    public properties: RivProperty[],
+    readonly start: number,
+    readonly finish: number
   ) {}
 }
 
@@ -308,16 +495,19 @@ export class RivProperty {
   constructor(
     public code: number,
     public type: RivPropertyType,
-    public value: RivValue
+    public value: RivValue,
+    readonly start: number,
+    readonly finish: number
   ) {}
 }
 
-export class RiveHeader {
+export class RivHeader {
   public constructor(
     public fingerprint: string,
     public major: number,
     public minor: number,
-    public fileId: number
+    public fileId: number,
+    readonly toc: RivToc
   ) {}
 }
 
@@ -352,6 +542,43 @@ export class RivString implements RivValue {
 
   public toString(): string {
     return `"${this.value}"`
+  }
+}
+
+export class CustomProperty {
+  constructor(readonly code: number, readonly valueType: RivValueType) {}
+}
+
+export class RivToc {
+  constructor(public toc: { [key: number]: number }) {}
+
+  get(code: number): CustomProperty | null {
+    const v = this.toc[code]
+
+    if (v == undefined) return null
+
+    let valueType: RivValueType
+    switch (v) {
+      case 0:
+        valueType = RivValueType.Uint
+        break
+
+      case 1:
+        valueType = RivValueType.String
+        break
+
+      case 2:
+        valueType = RivValueType.Float
+        break
+      case 3:
+        valueType = RivValueType.Color
+        break
+
+      default:
+        throw new Error(`Unknown value type ${v}`)
+    }
+
+    return new CustomProperty(code, valueType)
   }
 }
 
@@ -402,6 +629,16 @@ export enum RivObjectType {
   KeyedProperty = 'keyedProperty',
   KeyFrameDouble = 'keyFrameDouble',
   Unknown = 'unknown',
+  Node = 'Node',
+  Rectangle = 'Rectangle',
+  Bone = 'Bone',
+  BoneBase = 'BoneBase',
+  PointsPath = 'PointsPath',
+  StraightVertex = 'StraightVertex',
+  Component = 'Component',
+  Skin = 'Skin',
+  Weight = 'Weight',
+  Tendon = 'Tendon',
 }
 
 export enum RivPropertyType {
@@ -423,8 +660,29 @@ export enum RivPropertyType {
   Frame = 'frame',
   Unknown = 'unknown',
   ColorValue = 'colorValue',
+  Custom = 'Custom',
+  CornerRadiusTL = 'cornerRadiusTL',
+  Rotation = 'Rotation',
+  BoneLength = 'BoneLength',
+  BoneY = 'BoneY',
+  IsClosed = 'IsClosed',
+  VertexX = 'VertexX',
+  VertexY = 'VertexY',
+  BoneX = 'BoneX',
+  Tx = 'Tx',
+  Ty = 'Ty',
+  BoneId = 'BoneId',
+  TendonXx = 'TendonXx',
+  TendonYx = 'TendonYx',
+  TendonXy = 'TendonXy',
+  TendonYy = 'TendonYy',
+  TendonTx = 'TendonTx',
+  TendonTy = 'TendonTy',
 }
 
 export enum RivValueType {
+  Uint = 'uint',
   Float = 'float',
+  String = 'string',
+  Color = 'color',
 }
