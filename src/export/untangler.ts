@@ -1,12 +1,15 @@
 import { Deprive } from '../comp/deprive'
 import { CompId } from '../comp/id'
 import { Artboard } from '../comp/object/artboard'
+import { PrimaryBone, SecondaryBone } from '../comp/object/bone'
 import { Fill, SolidColorFill } from '../comp/object/fill'
 import { DepriveObject, Nesting } from '../comp/object/object'
 import { Rectangle, Shape } from '../comp/object/shapes'
 import {
   RivArtboard,
   RivBlackBoard,
+  RivBone,
+  RivBoneBase,
   RivExportedObject,
   RivFill,
   RivObject,
@@ -155,6 +158,14 @@ export class Untangler {
       return this.exportRectangle(object, parentId)
     }
 
+    if (object instanceof PrimaryBone) {
+      return [this.exportPrimaryBone(object, parentId)]
+    }
+
+    if (object instanceof SecondaryBone) {
+      return [this.exportSecondaryBone(object, parentId)]
+    }
+
     throw new Error(
       `unhandled intermediate export object ${object.constructor.name}`
     )
@@ -188,6 +199,28 @@ export class Untangler {
     })
 
     return result
+  }
+
+  private exportPrimaryBone(
+    bone: PrimaryBone,
+    parentId: IntermediateId
+  ): IntermediateEntry {
+    return {
+      id: this.nextIntermediateId(),
+      parentId,
+      object: new RivBone(bone.x, bone.y, bone.length, bone.rotation),
+    }
+  }
+
+  private exportSecondaryBone(
+    bone: SecondaryBone,
+    parentId: IntermediateId
+  ): IntermediateEntry {
+    return {
+      id: this.nextIntermediateId(),
+      parentId,
+      object: new RivBoneBase(bone.length, bone.rotation),
+    }
   }
 
   private exportShape(
