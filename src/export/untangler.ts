@@ -1,13 +1,15 @@
 import { Deprive } from '../comp/deprive'
 import { CompId } from '../comp/id'
 import { Artboard } from '../comp/object/artboard'
+import { Fill, SolidColorFill } from '../comp/object/fill'
 import { DepriveObject, Nesting } from '../comp/object/object'
-import { RivObject } from '../parse/RivTreeVisualizer'
+import { Rectangle, Shape } from '../comp/object/shapes'
 import {
   RivArtboard,
   RivBlackBoard,
   RivExportedObject,
   RivFill,
+  RivObject,
   RivRectangle,
   RivShape,
   RivSolidColor,
@@ -125,11 +127,130 @@ export class Untangler {
   }
 
   private intermediateExport(tree: Tree<DepriveObject>): IntermediateEntry[] {
-    return []
+    const result: IntermediateEntry[] = []
+
+    const go = (tree: Tree<DepriveObject>, parentId: number | null) => {
+      const entries = this.intermediateExportObject(
+        tree.value,
+        parentId == null ? -1 : parentId
+      )
+      result.push(...entries)
+      tree.children.forEach((child) => go(child, entries[0].id))
+    }
+
+    go(tree, null)
+
+    return result
+  }
+
+  private intermediateExportObject(
+    object: DepriveObject,
+    parentId: IntermediateId
+  ): IntermediateEntry[] {
+    if (object instanceof Artboard) {
+      return this.exportArtboard(object)
+    }
+
+    if (object instanceof Rectangle) {
+      return this.exportRectangle(object, parentId)
+    }
+
+    throw new Error(
+      `unhandled intermediate export object ${object.constructor.name}`
+    )
+  }
+
+  private exportArtboard(artboard: Artboard): IntermediateEntry[] {
+    return [
+      {
+        id: this.nextIntermediateId(),
+        parentId: -1,
+        object: new RivArtboard(artboard.width, artboard.height),
+      },
+    ]
+  }
+
+  private exportRectangle(
+    rectangle: Rectangle,
+    parentId: IntermediateId
+  ): IntermediateEntry[] {
+    const shape = this.exportShape(rectangle, parentId)
+
+    const result: IntermediateEntry[] = [shape]
+    result.push({
+      id: this.nextIntermediateId(),
+      parentId: shape.id,
+      object: new RivRectangle(rectangle.width, rectangle.height),
+    })
+
+    rectangle.fills.forEach((fill) => {
+      result.push(...this.exprortFill(fill, shape.id))
+    })
+
+    return result
+  }
+
+  private exportShape(
+    shape: Shape,
+    parentId: IntermediateId
+  ): IntermediateEntry {
+    return {
+      id: this.nextIntermediateId(),
+      parentId: parentId,
+      object: new RivShape(shape.x, shape.y),
+    }
+  }
+
+  private exprortFill(
+    fill: Fill,
+    parentId: IntermediateId
+  ): IntermediateEntry[] {
+    const result: IntermediateEntry[] = []
+
+    if (fill instanceof SolidColorFill) {
+      const colorId = this.nextIntermediateId()
+      const fillId = this.nextIntermediateId()
+
+      result.push({
+        id: colorId,
+        parentId: fillId,
+        object: new RivSolidColor(
+          fill.color.r,
+          fill.color.g,
+          fill.color.b,
+          fill.color.a
+        ),
+      })
+
+      result.push({
+        id: fillId,
+        parentId: parentId,
+        object: new RivFill(),
+      })
+    } else {
+      throw new Error(`unhandled fill ${fill.constructor.name}`)
+    }
+
+    return result
   }
 
   private assignFinalIds(entries: IntermediateEntry[]): RivExportedObject[] {
-    return []
+    const old2new = new Map<IntermediateId, number>()
+    entries.forEach((entry, index) => {
+      old2new.set(entry.id, index)
+    })
+
+    const result = entries.map((entry) => ({
+      parentId: entry.parentId === -1 ? -1 : old2new.get(entry.parentId)!,
+      object: entry.object,
+    }))
+
+    result.splice(0, 0, {
+      parentId: -1,
+      object: new RivBlackBoard(),
+    })
+
+    return result
   }
 }
 

@@ -1,5 +1,5 @@
-import { RivObject } from './objects'
+import { RivExportedObject } from './objects'
 
 export class Riv {
-  constructor(readonly objects: { parentId: number; object: RivObject }[]) {}
+  constructor(readonly objects: RivExportedObject[]) {}
 }

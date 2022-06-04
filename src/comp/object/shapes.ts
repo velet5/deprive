@@ -15,7 +15,7 @@ export class Rectangle implements Shape {
     readonly y: number,
     readonly width: number,
     readonly height: number,
-    private fills: Fill[] = []
+    readonly fills: Fill[] = []
   ) {}
 
   fill(fill: Fill): Rectangle {

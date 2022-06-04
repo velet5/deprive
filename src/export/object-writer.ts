@@ -3,7 +3,6 @@ import {
   RivBlackBoard,
   RivExportedObject,
   RivFill,
-  RivObject,
   RivRectangle,
   RivShape,
   RivSolidColor,
@@ -40,6 +39,10 @@ export class ObjectWriter {
   private writeObject(buffer: Buffer, exported: RivExportedObject) {
     const parentId = exported.parentId
     const object = exported.object
+
+    console.log(
+      `Exporting object ${object.constructor.name}: ${parentId} ${object}`
+    )
 
     if (object instanceof RivBlackBoard) {
       this.writeBlackBoard(buffer)
@@ -123,10 +126,10 @@ export class ObjectWriter {
     buffer.addByte(propId.parent)
     buffer.addByte(parentId)
     buffer.addByte(propId.colorValue)
-    buffer.addByte(solidColor.r)
-    buffer.addByte(solidColor.g)
     buffer.addByte(solidColor.b)
-    buffer.addByte(solidColor.a)
+    buffer.addByte(solidColor.g)
+    buffer.addByte(solidColor.r)
+    buffer.addByte(Math.floor((solidColor.a / 100) * 255))
     buffer.addZero()
   }
 
