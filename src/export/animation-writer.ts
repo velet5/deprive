@@ -27,7 +27,8 @@ const propertyIds = {
 }
 
 const keyedPropertyCodes = {
-  boneRotation: 0x0f,
+  x: 0x0d,
+  rotation: 0x0f,
 }
 
 export class AnimationWriter {
@@ -113,6 +114,7 @@ export class AnimationWriter {
   }
 
   private property2code: { [key: number]: number } = {
-    [RivAnimatableProperty.BoneRotation]: keyedPropertyCodes.boneRotation,
+    [RivAnimatableProperty.Rotation]: keyedPropertyCodes.rotation,
+    [RivAnimatableProperty.X]: keyedPropertyCodes.x,
   }
 }
