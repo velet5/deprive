@@ -1,3 +1,9 @@
+import {
+  AnimatableProperty,
+  Animation,
+  AnimationFrame,
+  AnimationLine,
+} from '../comp/anim/animation'
 import { Deprive } from '../comp/deprive'
 import { CompId } from '../comp/id'
 import { Artboard } from '../comp/object/artboard'
@@ -5,6 +11,16 @@ import { PrimaryBone, SecondaryBone } from '../comp/object/bone'
 import { Fill, SolidColorFill } from '../comp/object/fill'
 import { DepriveObject, Nesting } from '../comp/object/object'
 import { Rectangle, Shape } from '../comp/object/shapes'
+import {
+  RivAnimatableProperty,
+  RivAnimation,
+  RivAnimationDoubleFrame,
+  RivAnimationFrame,
+  RivAnimationObject,
+  RivAnimationProperty,
+  RivInterpolationType,
+} from './model/animations'
+import { propertyToType, RivPropertyType } from './model/meta'
 import {
   RivArtboard,
   RivBlackBoard,
@@ -24,7 +40,9 @@ type IntermediateEntry = {
   id: IntermediateId
   parentId: IntermediateId
   object: RivObject
+  counterpart: DepriveObject
 }
+type FinalTreeEntry = { id: number; compId: CompId; object: RivExportedObject }
 
 export class Untangler {
   interId: IntermediateId = 0
@@ -59,9 +77,164 @@ export class Untangler {
     )
 
     const intermediate = this.intermediateExport(objectTree)
-    const exported = this.assignFinalIds(intermediate)
+    const intermediate2final = new Map<IntermediateId, number>()
+    const final2original = new Map<number, CompId>()
+    intermediate.forEach((entry, index) => {
+      intermediate2final.set(entry.id, index)
+      final2original.set(index, entry.counterpart.id)
+    })
 
-    return new Riv(exported)
+    const exported = this.assignFinalIds(intermediate, intermediate2final)
+
+    const finalTree = this.makeFinalTree(exported, final2original)
+    const animations = this.exportAnimations(d.getAllAnimations(), finalTree)
+
+    console.log(finalTree)
+
+    exported.splice(0, 0, {
+      parentId: -1,
+      object: new RivBlackBoard(),
+    })
+
+    return new Riv(exported, animations)
+  }
+
+  private makeFinalTree(
+    objects: RivExportedObject[],
+    final2original: Map<number, CompId>
+  ): Tree<FinalTreeEntry> {
+    const arr = objects.map((object, id) => ({
+      id,
+      object,
+      compId: final2original.get(id)!,
+    }))
+    const root = arr.find((entry) => entry.object.parentId == -1)!
+
+    const tree = new Tree<FinalTreeEntry>(root)
+
+    const grow = (tree: Tree<FinalTreeEntry>) => {
+      const v = tree.value
+      const children = arr.filter((entry) => entry.object.parentId === v.id)
+      children.forEach((child) => {
+        const childTree = new Tree(child)
+        tree.add(childTree)
+        grow(childTree)
+      })
+    }
+    grow(tree)
+
+    return tree
+  }
+
+  private findFinalIdForAnimationObject(
+    compId: CompId,
+    tree: Tree<FinalTreeEntry>,
+    property: RivAnimatableProperty
+  ): number {
+    const go = (tree: Tree<FinalTreeEntry>, met: boolean): number => {
+      const v = tree.value
+      if (v.compId === compId) {
+        if (v.object.object.meta.animatable.includes(property)) return v.id
+        else {
+          for (const child of tree.children) {
+            const id = go(child, met)
+            if (id != -1) return id
+          }
+          return -1
+        }
+      } else if (met) {
+        return -1
+      } else {
+        for (const child of tree.children) {
+          const r = go(child, met)
+          if (r != -1) return r
+        }
+        return -1
+      }
+    }
+    return go(tree, false)
+  }
+
+  private exportAnimations(
+    animations: Animation[],
+    tree: Tree<FinalTreeEntry>
+  ): RivAnimation[] {
+    return animations.map((animation) => {
+      return this.exportAnimation(animation, tree)
+    })
+  }
+
+  private exportAnimation(
+    animation: Animation,
+    tree: Tree<FinalTreeEntry>
+  ): RivAnimation {
+    const lineTuples = animation.lines.map((line) =>
+      this.exportAnimationLine(line, tree)
+    )
+
+    const byObject = new Map<number, RivAnimationProperty[]>()
+
+    lineTuples.forEach(([objectId, prop]) => {
+      const arr = byObject.get(objectId)
+      if (!arr) {
+        byObject.set(objectId, [prop])
+      } else {
+        arr.push(prop)
+      }
+    })
+
+    const objects: RivAnimationObject[] = []
+    for (let [k, v] of byObject.entries()) {
+      objects.push(new RivAnimationObject(k, v))
+    }
+
+    return new RivAnimation(animation.name, animation.type, objects)
+  }
+
+  private exportAnimationLine(
+    line: AnimationLine<any>,
+    tree: Tree<FinalTreeEntry>
+  ): [number, RivAnimationProperty] {
+    const property = this.toRivAnimatableProperty(line.property)
+    const type = propertyToType.get(property)!
+    const frames = line.frames.map((frame) =>
+      this.exportAnimationFrame(frame, type)
+    )
+    const objectId = this.findFinalIdForAnimationObject(
+      line.objectId,
+      tree,
+      property
+    )
+
+    return [objectId, new RivAnimationProperty(property, frames)]
+  }
+
+  private toRivAnimatableProperty(
+    property: AnimatableProperty
+  ): RivAnimatableProperty {
+    switch (property) {
+      case AnimatableProperty.Rotation:
+        return RivAnimatableProperty.BoneRotation
+      default:
+        throw new Error(`Unknown animatable property: ${property}`)
+    }
+  }
+
+  private exportAnimationFrame(
+    frame: AnimationFrame<any>,
+    type: RivPropertyType
+  ): RivAnimationFrame {
+    switch (type) {
+      case RivPropertyType.Double:
+        return new RivAnimationDoubleFrame(
+          frame.frameNumber,
+          frame.value as number,
+          RivInterpolationType.linear
+        )
+
+      default:
+        throw new Error(`Unknown property type: ${type}`)
+    }
   }
 
   private listObjectWithoutParent(
@@ -177,6 +350,7 @@ export class Untangler {
         id: this.nextIntermediateId(),
         parentId: -1,
         object: new RivArtboard(artboard.width, artboard.height),
+        counterpart: artboard,
       },
     ]
   }
@@ -192,6 +366,7 @@ export class Untangler {
       id: this.nextIntermediateId(),
       parentId: shape.id,
       object: new RivRectangle(rectangle.width, rectangle.height),
+      counterpart: rectangle,
     })
 
     rectangle.fills.forEach((fill) => {
@@ -209,6 +384,7 @@ export class Untangler {
       id: this.nextIntermediateId(),
       parentId,
       object: new RivBone(bone.x, bone.y, bone.length, bone.rotation),
+      counterpart: bone,
     }
   }
 
@@ -220,6 +396,7 @@ export class Untangler {
       id: this.nextIntermediateId(),
       parentId,
       object: new RivBoneBase(bone.length, bone.rotation),
+      counterpart: bone,
     }
   }
 
@@ -231,6 +408,7 @@ export class Untangler {
       id: this.nextIntermediateId(),
       parentId: parentId,
       object: new RivShape(shape.x, shape.y),
+      counterpart: shape,
     }
   }
 
@@ -253,12 +431,14 @@ export class Untangler {
           fill.color.b,
           fill.color.a
         ),
+        counterpart: fill,
       })
 
       result.push({
         id: fillId,
         parentId: parentId,
         object: new RivFill(),
+        counterpart: fill,
       })
     } else {
       throw new Error(`unhandled fill ${fill.constructor.name}`)
@@ -267,27 +447,20 @@ export class Untangler {
     return result
   }
 
-  private assignFinalIds(entries: IntermediateEntry[]): RivExportedObject[] {
-    const old2new = new Map<IntermediateId, number>()
-    entries.forEach((entry, index) => {
-      old2new.set(entry.id, index)
-    })
-
+  private assignFinalIds(
+    entries: IntermediateEntry[],
+    old2new: Map<number, number>
+  ): RivExportedObject[] {
     const result = entries.map((entry) => ({
       parentId: entry.parentId === -1 ? -1 : old2new.get(entry.parentId)!,
       object: entry.object,
     }))
 
-    result.splice(0, 0, {
-      parentId: -1,
-      object: new RivBlackBoard(),
-    })
-
     return result
   }
 }
 
-class Tree<A> {
+export class Tree<A> {
   constructor(readonly value: A, readonly children: Tree<A>[] = []) {}
 
   add(child: Tree<A>): Tree<A> {

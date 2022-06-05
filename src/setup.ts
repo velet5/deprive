@@ -1,3 +1,4 @@
+import { AnimatableProperty } from './comp/anim/animation'
 import { Deprive } from './comp/deprive'
 import { Color } from './comp/misc/color'
 import { Point } from './comp/misc/point'
@@ -19,20 +20,26 @@ export const make = (): Deprive => {
     rotation: 0,
   })
 
-  console.log(legBones)
-
   D.nest(artboard, legBones.primary)
 
   const part = () =>
     D.rectangle(new Point((x * 3.5 - x) / 2, 0), new Size(x * 3.5, x))
-  const thigh = part()
-  const shin = part()
-
-  thigh.fill(black)
-  shin.fill(red)
+  const thigh = part().fill(black)
+  const shin = part().fill(red)
 
   D.nest(legBones.primary, thigh)
   D.nest(legBones.secondaries[0], shin)
+
+  D.animation('move')
+    .pingPong()
+    .line(legBones.primary, AnimatableProperty.Rotation, {
+      0: 90,
+      60: 0,
+    })
+    .line(legBones.secondaries[0], AnimatableProperty.Rotation, {
+      0: 0,
+      60: 90,
+    })
 
   return D
 }

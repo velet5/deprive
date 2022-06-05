@@ -17,6 +17,7 @@ export class Buffer {
 
   addString(string: string) {
     const bytes = string.split('').map((char) => char.charCodeAt(0))
+    this.addVarUint(bytes.length)
     this.addBytes(bytes)
   }
 

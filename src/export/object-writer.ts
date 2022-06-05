@@ -50,7 +50,8 @@ export class ObjectWriter {
     const object = exported.object
 
     console.log(
-      `Exporting object ${object.constructor.name}: ${parentId} ${object}`
+      `Exporting object ${object.constructor.name}: ${parentId}`,
+      object
     )
 
     if (object instanceof RivBlackBoard) {

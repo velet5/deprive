@@ -22,10 +22,12 @@ class Impl {
   export(deprive: Deprive): Uint8Array {
     const riv = new Untangler().untangle(deprive)
 
+    console.log(riv)
+
     const buffer = new Buffer()
     this.headerWriter.write(buffer, this.fileId)
     this.objectWriter.write(buffer, riv.objects)
-    this.animationWriter.write(buffer)
+    this.animationWriter.write(buffer, riv.animations)
     return buffer.toUint8Array()
   }
 }
