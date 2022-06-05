@@ -27,7 +27,7 @@ const propertyIds = {
 }
 
 const keyedPropertyCodes = {
-  rotation: 0x0f,
+  boneRotation: 0x0f,
 }
 
 export class AnimationWriter {
@@ -65,6 +65,7 @@ export class AnimationWriter {
   }
 
   private writeProperty(buffer: Buffer, property: RivAnimationProperty) {
+    console.log(property)
     const code = this.property2code[property.property]
 
     if (code == undefined) {
@@ -93,8 +94,10 @@ export class AnimationWriter {
     }
     buffer.addByte(propertyIds.interpolationType)
     buffer.addByte(frame.interpolationType)
-    buffer.addByte(propertyIds.doubleFrameValue)
-    buffer.addFloat(frame.value)
+    if (frame.value != 0) {
+      buffer.addByte(propertyIds.doubleFrameValue)
+      buffer.addFloat(frame.value)
+    }
     buffer.addZero()
   }
 
@@ -110,6 +113,6 @@ export class AnimationWriter {
   }
 
   private property2code: { [key: number]: number } = {
-    [RivAnimatableProperty.rotation]: keyedPropertyCodes.rotation,
+    [RivAnimatableProperty.BoneRotation]: keyedPropertyCodes.boneRotation,
   }
 }

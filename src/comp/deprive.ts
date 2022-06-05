@@ -9,6 +9,7 @@ import { Fill, SolidColorFill } from './object/fill'
 import { DepriveObject, Nesting } from './object/object'
 import { Rectangle } from './object/shapes'
 import { AnimationLine } from './anim/animation'
+import { Angle } from '../export/util/conver'
 
 export class Deprive {
   private idProvider = new IdProvider()
@@ -148,7 +149,10 @@ export class DepriveAnimation {
   ) {
     const fs = []
     for (const [frameNumber, value] of Object.entries(frames)) {
-      fs.push({ frameNumber: parseInt(frameNumber), value })
+      fs.push({
+        frameNumber: parseInt(frameNumber),
+        value: this.adaptValue(property, value),
+      })
     }
     this.lines.push(new AnimationLine(object.id, property, fs))
     return this
@@ -176,5 +180,12 @@ export class DepriveAnimation {
 
   getIsPingPong(): boolean {
     return this.isPingPong
+  }
+
+  private adaptValue<A>(prop: AnimatableProperty, value: A): any {
+    if (prop == AnimatableProperty.Rotation) {
+      return Angle.toRadians(value as unknown as number)
+    }
+    return value
   }
 }

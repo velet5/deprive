@@ -1,4 +1,9 @@
-import { Animation, AnimationLine } from '../comp/anim/animation'
+import {
+  AnimatableProperty,
+  Animation,
+  AnimationFrame,
+  AnimationLine,
+} from '../comp/anim/animation'
 import { Deprive } from '../comp/deprive'
 import { CompId } from '../comp/id'
 import { Artboard } from '../comp/object/artboard'
@@ -7,10 +12,15 @@ import { Fill, SolidColorFill } from '../comp/object/fill'
 import { DepriveObject, Nesting } from '../comp/object/object'
 import { Rectangle, Shape } from '../comp/object/shapes'
 import {
+  RivAnimatableProperty,
   RivAnimation,
+  RivAnimationDoubleFrame,
+  RivAnimationFrame,
   RivAnimationObject,
   RivAnimationProperty,
+  RivInterpolationType,
 } from './model/animations'
+import { propertyToType, RivPropertyType } from './model/meta'
 import {
   RivArtboard,
   RivBlackBoard,
@@ -32,6 +42,7 @@ type IntermediateEntry = {
   object: RivObject
   counterpart: DepriveObject
 }
+type FinalTreeEntry = { id: number; compId: CompId; object: RivExportedObject }
 
 export class Untangler {
   interId: IntermediateId = 0
@@ -74,44 +85,156 @@ export class Untangler {
     })
 
     const exported = this.assignFinalIds(intermediate, intermediate2final)
-    const animations = this.exportAnimations(d.getAllAnimations())
+
+    const finalTree = this.makeFinalTree(exported, final2original)
+    const animations = this.exportAnimations(d.getAllAnimations(), finalTree)
+
+    console.log(finalTree)
+
+    exported.splice(0, 0, {
+      parentId: -1,
+      object: new RivBlackBoard(),
+    })
 
     return new Riv(exported, animations)
   }
 
-  private exportAnimations(animations: Animation[]): RivAnimation[] {
+  private makeFinalTree(
+    objects: RivExportedObject[],
+    final2original: Map<number, CompId>
+  ): Tree<FinalTreeEntry> {
+    const arr = objects.map((object, id) => ({
+      id,
+      object,
+      compId: final2original.get(id)!,
+    }))
+    const root = arr.find((entry) => entry.object.parentId == -1)!
+
+    const tree = new Tree<FinalTreeEntry>(root)
+
+    const grow = (tree: Tree<FinalTreeEntry>) => {
+      const v = tree.value
+      const children = arr.filter((entry) => entry.object.parentId === v.id)
+      children.forEach((child) => {
+        const childTree = new Tree(child)
+        tree.add(childTree)
+        grow(childTree)
+      })
+    }
+    grow(tree)
+
+    return tree
+  }
+
+  private findFinalIdForAnimationObject(
+    compId: CompId,
+    tree: Tree<FinalTreeEntry>,
+    property: RivAnimatableProperty
+  ): number {
+    const go = (tree: Tree<FinalTreeEntry>, met: boolean): number => {
+      const v = tree.value
+      if (v.compId === compId) {
+        if (v.object.object.meta.animatable.includes(property)) return v.id
+        else {
+          for (const child of tree.children) {
+            const id = go(child, met)
+            if (id != -1) return id
+          }
+          return -1
+        }
+      } else if (met) {
+        return -1
+      } else {
+        for (const child of tree.children) {
+          const r = go(child, met)
+          if (r != -1) return r
+        }
+        return -1
+      }
+    }
+    return go(tree, false)
+  }
+
+  private exportAnimations(
+    animations: Animation[],
+    tree: Tree<FinalTreeEntry>
+  ): RivAnimation[] {
     return animations.map((animation) => {
-      return this.exportAnimation(animation)
+      return this.exportAnimation(animation, tree)
     })
   }
 
-  private exportAnimation(animation: Animation): RivAnimation {
-    const byObject = new Map<CompId, AnimationLine<any>[]>()
+  private exportAnimation(
+    animation: Animation,
+    tree: Tree<FinalTreeEntry>
+  ): RivAnimation {
+    const lineTuples = animation.lines.map((line) =>
+      this.exportAnimationLine(line, tree)
+    )
 
-    animation.lines.forEach((line) => {
-      const key = line.objectId
-      const lines = byObject.get(key) || []
-      lines.push(line)
-      byObject.set(key, lines)
+    const byObject = new Map<number, RivAnimationProperty[]>()
+
+    lineTuples.forEach(([objectId, prop]) => {
+      const arr = byObject.get(objectId)
+      if (!arr) {
+        byObject.set(objectId, [prop])
+      } else {
+        arr.push(prop)
+      }
     })
 
-    let objects: RivAnimationObject[] = []
-
-    byObject.forEach((lines, key) => {
-      const properties = lines.map((line) =>
-        this.exportAnimationLine(line, key)
-      )
-      return new RivAnimationObject(-1, properties)
-    })
+    const objects: RivAnimationObject[] = []
+    for (let [k, v] of byObject.entries()) {
+      objects.push(new RivAnimationObject(k, v))
+    }
 
     return new RivAnimation(animation.name, animation.type, objects)
   }
 
   private exportAnimationLine(
     line: AnimationLine<any>,
-    compId: CompId
-  ): RivAnimationProperty {
-    return new RivAnimationProperty(-1)
+    tree: Tree<FinalTreeEntry>
+  ): [number, RivAnimationProperty] {
+    const property = this.toRivAnimatableProperty(line.property)
+    const type = propertyToType.get(property)!
+    const frames = line.frames.map((frame) =>
+      this.exportAnimationFrame(frame, type)
+    )
+    const objectId = this.findFinalIdForAnimationObject(
+      line.objectId,
+      tree,
+      property
+    )
+
+    return [objectId, new RivAnimationProperty(property, frames)]
+  }
+
+  private toRivAnimatableProperty(
+    property: AnimatableProperty
+  ): RivAnimatableProperty {
+    switch (property) {
+      case AnimatableProperty.Rotation:
+        return RivAnimatableProperty.BoneRotation
+      default:
+        throw new Error(`Unknown animatable property: ${property}`)
+    }
+  }
+
+  private exportAnimationFrame(
+    frame: AnimationFrame<any>,
+    type: RivPropertyType
+  ): RivAnimationFrame {
+    switch (type) {
+      case RivPropertyType.Double:
+        return new RivAnimationDoubleFrame(
+          frame.frameNumber,
+          frame.value as number,
+          RivInterpolationType.linear
+        )
+
+      default:
+        throw new Error(`Unknown property type: ${type}`)
+    }
   }
 
   private listObjectWithoutParent(
@@ -333,16 +456,11 @@ export class Untangler {
       object: entry.object,
     }))
 
-    result.splice(0, 0, {
-      parentId: -1,
-      object: new RivBlackBoard(),
-    })
-
     return result
   }
 }
 
-class Tree<A> {
+export class Tree<A> {
   constructor(readonly value: A, readonly children: Tree<A>[] = []) {}
 
   add(child: Tree<A>): Tree<A> {

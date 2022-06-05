@@ -37,5 +37,14 @@ export enum RivInterpolationType {
 }
 
 export enum RivAnimatableProperty {
-  rotation = 1,
+  Rotation = 1,
+  ShapeWidth,
+  ShapeHeight,
+  ShapeX,
+  ShapeY,
+  BoneLength,
+  BoneRotation,
+  BoneX,
+  BoneY,
+  ColorValue,
 }
