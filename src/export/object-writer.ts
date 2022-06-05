@@ -3,8 +3,10 @@ import {
   RivBlackBoard,
   RivBone,
   RivBoneBase,
+  RivEllipse,
   RivExportedObject,
   RivFill,
+  RivNode,
   RivRectangle,
   RivShape,
   RivSolidColor,
@@ -14,7 +16,9 @@ import { Angle } from './util/conver'
 
 const objectId = {
   artboard: 0x01,
+  node: 0x02,
   shape: 0x03,
+  ellipse: 0x04,
   rectangle: 0x07,
   solidColor: 0x12,
   fill: 0x14,
@@ -27,11 +31,12 @@ const propId = {
   parent: 0x05,
   artboardWidth: 0x07,
   artboardHeight: 0x08,
-  shapeX: 0x0d,
-  shapeY: 0x0e,
+  x: 0x0d,
+  y: 0x0e,
   rotation: 0x0f,
   shapeWidth: 0x14,
   shapeHeight: 0x15,
+  cornerRadiusTL: 0x1f,
   colorValue: 0x25,
   boneLength: 0x59,
   boneX: 0x5a,
@@ -74,6 +79,11 @@ export class ObjectWriter {
       return
     }
 
+    if (object instanceof RivEllipse) {
+      this.writeEllipse(buffer, parentId, object)
+      return
+    }
+
     if (object instanceof RivSolidColor) {
       this.writeSolidColor(buffer, parentId, object)
       return
@@ -94,7 +104,27 @@ export class ObjectWriter {
       return
     }
 
+    if (object instanceof RivNode) {
+      this.writeNode(buffer, parentId, object)
+      return
+    }
+
     throw new Error(`Object ${object.constructor.name} is not supported`)
+  }
+
+  private writeNode(buffer: Buffer, parentId: number, node: RivNode) {
+    buffer.addByte(objectId.node)
+    buffer.addByte(propId.parent)
+    buffer.addByte(parentId)
+    buffer.addByte(propId.x)
+    buffer.addFloat(node.x)
+    buffer.addByte(propId.y)
+    buffer.addFloat(node.y)
+    if (node.rotation !== 0) {
+      buffer.addByte(propId.rotation)
+      buffer.addFloat(Angle.toRadians(node.rotation))
+    }
+    buffer.addZero()
   }
 
   private writeBlackBoard(buffer: Buffer) {
@@ -115,9 +145,9 @@ export class ObjectWriter {
     buffer.addByte(objectId.shape)
     buffer.addByte(propId.parent)
     buffer.addByte(parentId)
-    buffer.addByte(propId.shapeX)
+    buffer.addByte(propId.x)
     buffer.addFloat(shape.x)
-    buffer.addByte(propId.shapeY)
+    buffer.addByte(propId.y)
     buffer.addFloat(shape.y)
     buffer.addZero()
   }
@@ -128,6 +158,25 @@ export class ObjectWriter {
     rectangle: RivRectangle
   ) {
     buffer.addByte(objectId.rectangle)
+    buffer.addByte(propId.parent)
+    buffer.addByte(parentId)
+    buffer.addByte(propId.shapeWidth)
+    buffer.addFloat(rectangle.width)
+    buffer.addByte(propId.shapeHeight)
+    buffer.addFloat(rectangle.height)
+    if (rectangle.corner !== 0) {
+      buffer.addByte(propId.cornerRadiusTL)
+      buffer.addFloat(rectangle.corner)
+    }
+    buffer.addZero()
+  }
+
+  private writeEllipse(
+    buffer: Buffer,
+    parentId: number,
+    rectangle: RivEllipse
+  ) {
+    buffer.addByte(objectId.ellipse)
     buffer.addByte(propId.parent)
     buffer.addByte(parentId)
     buffer.addByte(propId.shapeWidth)

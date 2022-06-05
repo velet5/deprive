@@ -7,9 +7,10 @@ import { Artboard } from './object/artboard'
 import { Bone, BoneSystem, PrimaryBone, SecondaryBone } from './object/bone'
 import { Fill, SolidColorFill } from './object/fill'
 import { DepriveObject, Nesting } from './object/object'
-import { Rectangle } from './object/shapes'
+import { Ellipse, Rectangle } from './object/shapes'
 import { AnimationLine } from './anim/animation'
 import { Angle } from '../export/util/conver'
+import { Group } from './object/group'
 
 export class Deprive {
   private idProvider = new IdProvider()
@@ -49,8 +50,19 @@ export class Deprive {
     )
   }
 
-  rectangle(position: Point, size: Size): Rectangle {
+  rectangle(position: Point, size: Size, corner: number = 0): Rectangle {
     return new Rectangle(
+      this.idProvider.gen(),
+      position.x,
+      position.y,
+      size.width,
+      size.height,
+      corner
+    )
+  }
+
+  ellipse(position: Point, size: Size): Ellipse {
+    return new Ellipse(
       this.idProvider.gen(),
       position.x,
       position.y,
@@ -132,6 +144,15 @@ export class Deprive {
     }
 
     return new BoneSystem(primary, secondaries)
+  }
+
+  group(position: Point, rotation: number = 0): Group {
+    return new Group(
+      this.idProvider.gen(),
+      position.x,
+      position.y,
+      Angle.toRadians(rotation)
+    )
   }
 }
 

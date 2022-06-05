@@ -9,8 +9,9 @@ import { CompId } from '../comp/id'
 import { Artboard } from '../comp/object/artboard'
 import { PrimaryBone, SecondaryBone } from '../comp/object/bone'
 import { Fill, SolidColorFill } from '../comp/object/fill'
+import { Group } from '../comp/object/group'
 import { DepriveObject, Nesting } from '../comp/object/object'
-import { Rectangle, Shape } from '../comp/object/shapes'
+import { Ellipse, Rectangle, Shape } from '../comp/object/shapes'
 import {
   RivAnimatableProperty,
   RivAnimation,
@@ -26,8 +27,10 @@ import {
   RivBlackBoard,
   RivBone,
   RivBoneBase,
+  RivEllipse,
   RivExportedObject,
   RivFill,
+  RivNode,
   RivObject,
   RivRectangle,
   RivShape,
@@ -214,7 +217,9 @@ export class Untangler {
   ): RivAnimatableProperty {
     switch (property) {
       case AnimatableProperty.Rotation:
-        return RivAnimatableProperty.BoneRotation
+        return RivAnimatableProperty.Rotation
+      case AnimatableProperty.X:
+        return RivAnimatableProperty.X
       default:
         throw new Error(`Unknown animatable property: ${property}`)
     }
@@ -331,6 +336,10 @@ export class Untangler {
       return this.exportRectangle(object, parentId)
     }
 
+    if (object instanceof Ellipse) {
+      return this.exportEllipse(object, parentId)
+    }
+
     if (object instanceof PrimaryBone) {
       return [this.exportPrimaryBone(object, parentId)]
     }
@@ -339,9 +348,25 @@ export class Untangler {
       return [this.exportSecondaryBone(object, parentId)]
     }
 
+    if (object instanceof Group) {
+      return [this.exportGroup(object, parentId)]
+    }
+
     throw new Error(
       `unhandled intermediate export object ${object.constructor.name}`
     )
+  }
+
+  private exportGroup(
+    group: Group,
+    parentId: IntermediateId
+  ): IntermediateEntry {
+    return {
+      id: this.nextIntermediateId(),
+      parentId: parentId,
+      object: new RivNode(group.x, group.y, group.rotation),
+      counterpart: group,
+    }
   }
 
   private exportArtboard(artboard: Artboard): IntermediateEntry[] {
@@ -365,7 +390,32 @@ export class Untangler {
     result.push({
       id: this.nextIntermediateId(),
       parentId: shape.id,
-      object: new RivRectangle(rectangle.width, rectangle.height),
+      object: new RivRectangle(
+        rectangle.width,
+        rectangle.height,
+        rectangle.cornerRadius
+      ),
+      counterpart: rectangle,
+    })
+
+    rectangle.fills.forEach((fill) => {
+      result.push(...this.exprortFill(fill, shape.id))
+    })
+
+    return result
+  }
+
+  private exportEllipse(
+    rectangle: Ellipse,
+    parentId: IntermediateId
+  ): IntermediateEntry[] {
+    const shape = this.exportShape(rectangle, parentId)
+
+    const result: IntermediateEntry[] = [shape]
+    result.push({
+      id: this.nextIntermediateId(),
+      parentId: shape.id,
+      object: new RivEllipse(rectangle.width, rectangle.height),
       counterpart: rectangle,
     })
 

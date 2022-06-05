@@ -19,6 +19,16 @@ export class RivArtboard implements RivObject {
   constructor(readonly width: number, readonly height: number) {}
 }
 
+export class RivNode implements RivObject {
+  readonly meta: RivObjectMeta = rivObjectMeta.node
+
+  constructor(
+    readonly x: number,
+    readonly y: number,
+    readonly rotation: number
+  ) {}
+}
+
 export class RivShape implements RivObject {
   readonly meta: RivObjectMeta = rivObjectMeta.shape
 
@@ -27,6 +37,16 @@ export class RivShape implements RivObject {
 
 export class RivRectangle implements RivObject {
   readonly meta: RivObjectMeta = rivObjectMeta.rectangle
+
+  constructor(
+    readonly width: number,
+    readonly height: number,
+    readonly corner: number
+  ) {}
+}
+
+export class RivEllipse implements RivObject {
+  readonly meta: RivObjectMeta = rivObjectMeta.ellipse
 
   constructor(readonly width: number, readonly height: number) {}
 }

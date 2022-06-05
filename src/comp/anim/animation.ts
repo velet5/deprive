@@ -2,6 +2,7 @@ import { CompId } from '../id'
 
 export enum AnimatableProperty {
   Rotation = 'rotation',
+  X = 'x',
 }
 
 export enum AnimationType {
